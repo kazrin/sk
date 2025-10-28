@@ -3,6 +3,12 @@ import pandas as pd
 
 st.title("🏥 医療機関検索システム")
 
+# Navigation buttons
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("📋 届出状況一覧を見る"):
+        st.switch_page("pages/2_届出状況一覧.py")
+
 # Configuration
 MAX_DISPLAY_COUNT = 50
 
@@ -24,6 +30,11 @@ def display_institution_info(row):
             st.write(f"**電話番号:** {row['電話番号']}")
             st.write(f"**FAX番号:** {row['FAX番号']}")
             st.write(f"**病床数:** {row['病床数']}")
+        
+        # Link to filing status page
+        if st.button(f"📋 {row['医療機関名称']}の届出状況を見る", key=f"btn_{row['医療機関番号']}"):
+            st.session_state['selected_institution'] = row['医療機関名称']
+            st.switch_page("pages/3_特定医療機関の届出状況.py")
 
 @st.cache_data
 def load_raw_data():
