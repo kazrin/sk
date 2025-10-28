@@ -61,5 +61,24 @@ if search_term:
     else:
         st.warning("該当する医療機関が見つかりませんでした。")
 else:
-    st.info("検索語を入力してください。")
+    # Display top 50 institutions when no search term
+    st.write("上位50件の医療機関一覧:")
+    
+    for _, row in institutions.head(50).iterrows():
+        with st.expander(f"{row['医療機関名称']} ({row['届出数']}件)"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**医療機関番号:** {row['医療機関番号']}")
+                st.write(f"**併設医療機関番号:** {row['併設医療機関番号']}")
+                st.write(f"**医療機関記号番号:** {row['医療機関記号番号']}")
+                st.write(f"**種別:** {row['種別']}")
+                st.write(f"**届出数:** {row['届出数']}件")
+            
+            with col2:
+                st.write(f"**郵便番号:** {row['医療機関所在地（郵便番号）']}")
+                st.write(f"**住所:** {row['医療機関所在地（住所）']}")
+                st.write(f"**電話番号:** {row['電話番号']}")
+                st.write(f"**FAX番号:** {row['FAX番号']}")
+                st.write(f"**病床数:** {row['病床数']}")
 
