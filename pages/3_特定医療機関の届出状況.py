@@ -53,9 +53,9 @@ if selected_institution:
     else:
         st.error("指定された医療機関のデータが見つかりませんでした。")
 else:
-    st.info("医療機関を選択してください。メインページから医療機関を検索して選択してください。")
+    st.info("医療機関検索ページから医療機関を検索して選択してください。")
 
 # Back button
-if st.button("← 検索ページに戻る"):
+if st.button("← ホームページに戻る"):
     st.switch_page("main.py")
 

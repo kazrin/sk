@@ -4,7 +4,7 @@ import pandas as pd
 st.title("📋 届出状況一覧")
 
 # Back button
-if st.button("← 医療機関検索ページに戻る"):
+if st.button("← ホームページに戻る"):
     st.switch_page("main.py")
 
 # Configuration
