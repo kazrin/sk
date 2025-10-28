@@ -26,12 +26,23 @@ search_term = st.text_input("医療機関名で検索", placeholder="医療機�
 
 # Filter results
 if search_term:
-    institutions = institutions[institutions['医療機関名称'].str.contains(search_term, case=False, na=False)]
-
-# Display results
-for _, row in institutions.iterrows():
-    with st.expander(f"{row['医療機関名称']} ({row['届出数']}件)"):
-        st.write(f"種別: {row['種別']}")
-        st.write(f"住所: {row['住所']}")
-        st.write(f"届出数: {row['届出数']}件")
+    filtered_institutions = institutions[institutions['医療機関名称'].str.contains(search_term, case=False, na=False)]
+    
+    if len(filtered_institutions) > 0:
+        st.write(f"検索結果: {len(filtered_institutions)} 件")
+        
+        # Display results (limit to 50 for performance)
+        display_count = min(50, len(filtered_institutions))
+        if len(filtered_institutions) > 50:
+            st.info(f"表示件数を50件に制限しています（全{len(filtered_institutions)}件中）")
+        
+        for _, row in filtered_institutions.head(display_count).iterrows():
+            with st.expander(f"{row['医療機関名称']} ({row['届出数']}件)"):
+                st.write(f"種別: {row['種別']}")
+                st.write(f"住所: {row['住所']}")
+                st.write(f"届出数: {row['届出数']}件")
+    else:
+        st.warning("該当する医療機関が見つかりませんでした。")
+else:
+    st.info("検索語を入力してください。")
 
