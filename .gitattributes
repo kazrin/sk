@@ -1,0 +1,3 @@
+*.feather !text !filter !merge !diff
+*.xlsx !text !filter !merge !diff
+data/** !text !filter !merge !diff
