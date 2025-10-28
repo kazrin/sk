@@ -9,32 +9,9 @@ with col1:
     if st.button("📋 届出状況一覧を見る"):
         st.switch_page("pages/2_届出状況一覧.py")
 
-# Configuration
-MAX_DISPLAY_COUNT = 50
-
-def display_institution_info(row):
-    """Display institution information in expander"""
-    with st.expander(f"{row['医療機関名称']} ({row['届出数']}件)"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write(f"**医療機関番号:** {row['医療機関番号']}")
-            st.write(f"**併設医療機関番号:** {row['併設医療機関番号']}")
-            st.write(f"**医療機関記号番号:** {row['医療機関記号番号']}")
-            st.write(f"**種別:** {row['種別']}")
-            st.write(f"**届出数:** {row['届出数']}件")
-        
-        with col2:
-            st.write(f"**郵便番号:** {row['医療機関所在地（郵便番号）']}")
-            st.write(f"**住所:** {row['医療機関所在地（住所）']}")
-            st.write(f"**電話番号:** {row['電話番号']}")
-            st.write(f"**FAX番号:** {row['FAX番号']}")
-            st.write(f"**病床数:** {row['病床数']}")
-        
-        # Link to filing status page
-        if st.button(f"📋 {row['医療機関名称']}の届出状況を見る", key=f"btn_{row['医療機関番号']}"):
-            st.session_state['selected_institution'] = row['医療機関名称']
-            st.switch_page("pages/3_特定医療機関の届出状況.py")
+# Create display columns
+DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '医療機関記号番号', '種別', '届出数', 
+                   '医療機関所在地（郵便番号）', '医療機関所在地（住所）', '電話番号', '病床数']
 
 @st.cache_data
 def load_raw_data():
@@ -73,18 +50,65 @@ if search_term:
     if len(filtered_institutions) > 0:
         st.write(f"検索結果: {len(filtered_institutions)} 件")
         
-        # Display results (limit to MAX_DISPLAY_COUNT for performance)
-        display_count = min(MAX_DISPLAY_COUNT, len(filtered_institutions))
-        if len(filtered_institutions) > MAX_DISPLAY_COUNT:
-            st.info(f"表示件数を{MAX_DISPLAY_COUNT}件に制限しています（全{len(filtered_institutions)}件中）")
+        # Select columns that exist in the dataframe
+        available_columns = [col for col in DISPLAY_COLUMNS if col in filtered_institutions.columns]
         
-        for _, row in filtered_institutions.head(display_count).iterrows():
-            display_institution_info(row)
+        # Create display dataframe
+        display_df = filtered_institutions[available_columns].copy()
+        
+        # Display results in table format
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Add navigation section
+        st.divider()
+        st.write("### 📋 届出状況を確認する医療機関を選択:")
+        
+        # Create buttons in rows of 5
+        institution_names = display_df['医療機関名称'].tolist()
+        for i in range(0, len(institution_names), 5):
+            cols = st.columns(5)
+            for j, col in enumerate(cols):
+                if i + j < len(institution_names):
+                    institution_name = institution_names[i + j]
+                    if col.button(f"📋 {institution_name[:20]}...", key=f"result_btn_{i+j}_{institution_name}"):
+                        st.session_state['selected_institution'] = institution_name
+                        st.switch_page("pages/3_特定医療機関の届出状況.py")
     else:
         st.warning("該当する医療機関が見つかりませんでした。")
 else:
-    # Display top institutions when no search term
-    st.write(f"上位{MAX_DISPLAY_COUNT}件の医療機関一覧:")
+    # Display all institutions when no search term
+    st.write(f"医療機関一覧 ({len(institutions)}件):")
     
-    for _, row in institutions.sort_values('届出数', ascending=False).head(MAX_DISPLAY_COUNT).iterrows():
-        display_institution_info(row)
+    # Select columns that exist in the dataframe
+    available_columns = [col for col in DISPLAY_COLUMNS if col in institutions.columns]
+    
+    # Create display dataframe
+    display_df = institutions[available_columns].copy()
+    
+    # Display results in table format
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Add navigation section
+    st.divider()
+    st.write("### 📋 届出状況を確認する医療機関を選択:")
+    
+    # Create buttons in rows of 5
+    institution_names = display_df['医療機関名称'].tolist()
+    for i in range(0, len(institution_names), 5):
+        cols = st.columns(5)
+        for j, col in enumerate(cols):
+            if i + j < len(institution_names):
+                institution_name = institution_names[i + j]
+                # Truncate long names
+                display_name = institution_name if len(institution_name) <= 20 else institution_name[:20] + "..."
+                if col.button(f"📋 {display_name}", key=f"list_btn_{i+j}_{institution_name}"):
+                    st.session_state['selected_institution'] = institution_name
+                    st.switch_page("pages/3_特定医療機関の届出状況.py")
