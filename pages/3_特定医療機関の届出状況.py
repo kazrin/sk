@@ -35,21 +35,25 @@ if selected_institution:
         
         st.divider()
         
-        # Display filing statuses
+        # Display filing statuses in table format
         st.write(f"### 届出状況一覧 ({len(institution_data)}件)")
         
-        # Group by filing status and count
-        filing_status = institution_data.groupby('受理届出名称').size().reset_index(name='件数')
-        filing_status = filing_status.sort_values('件数', ascending=False)
+        # Prepare data for table
+        display_columns = ['受理届出名称', '受理記号', '受理番号', '算定開始年月日', '個別有効開始年月日']
         
-        for _, row in filing_status.iterrows():
-            with st.container():
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.write(f"**{row['受理届出名称']}**")
-                with col2:
-                    st.metric("件数", f"{row['件数']:,}")
-                st.divider()
+        # Check which columns exist in the data
+        available_columns = [col for col in display_columns if col in institution_data.columns]
+        
+        if available_columns:
+            # Create display dataframe
+            display_data = institution_data[available_columns].copy()
+            
+            # Display as table
+            st.dataframe(
+                display_data,
+                use_container_width=True,
+                hide_index=True
+            )
     else:
         st.error("指定された医療機関のデータが見つかりませんでした。")
 else:
