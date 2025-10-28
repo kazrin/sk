@@ -26,8 +26,12 @@ def display_institution_info(row):
             st.write(f"**病床数:** {row['病床数']}")
 
 @st.cache_data
-def load_data():
-    df = pd.read_excel("data/r7/tokyo.xlsx", skiprows=3)
+def load_raw_data():
+    return pd.read_excel("data/r7/tokyo.xlsx", skiprows=3)
+
+@st.cache_data
+def load_stats_data():
+    df = load_raw_data()
     institutions = df.groupby('医療機関名称').agg({
         '医療機関番号': 'first',
         '併設医療機関番号': 'first',
@@ -45,7 +49,7 @@ def load_data():
     return institutions.sort_values('医療機関名称')
 
 # Load data
-institutions = load_data()
+institutions = load_stats_data()
 st.write(f"総医療機関数: {len(institutions):,} 件")
 
 # Search
@@ -71,6 +75,6 @@ else:
     # Display top institutions when no search term
     st.write(f"上位{MAX_DISPLAY_COUNT}件の医療機関一覧:")
     
-    for _, row in institutions.head(MAX_DISPLAY_COUNT).iterrows():
+    for _, row in institutions.sort_values('届出数', ascending=False).head(MAX_DISPLAY_COUNT).iterrows():
         display_institution_info(row)
 
