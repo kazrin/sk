@@ -276,7 +276,6 @@ if selected_institution:
             if show_only_unfiled:
                 # Filter rows where target institution (first column) is False
                 filtered_cross_tab_df = cross_tab_df[cross_tab_df[selected_institution] == False]
-                st.write(f"**表示件数: {len(filtered_cross_tab_df)}件 (全{len(cross_tab_df)}件中)**")
             else:
                 filtered_cross_tab_df = cross_tab_df
             
