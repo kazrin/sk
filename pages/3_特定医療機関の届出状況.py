@@ -1,11 +1,8 @@
 import streamlit as st
 import pandas as pd
+from utils import load_raw_data
 
 st.title("📋 特定医療機関の届出状況")
-
-@st.cache_data
-def load_raw_data():
-    return pd.read_excel("data/r7/tokyo.xlsx", skiprows=3)
 
 # Get selected institution from session state
 selected_institution = st.session_state.get('selected_institution', None)
@@ -23,15 +20,32 @@ if selected_institution:
         # Display basic information
         col1, col2 = st.columns(2)
         
+        row_data = institution_data.iloc[0]
+        
         with col1:
-            st.write(f"**医療機関番号:** {institution_data.iloc[0]['医療機関番号']}")
-            st.write(f"**医療機関記号番号:** {institution_data.iloc[0]['医療機関記号番号']}")
-            st.write(f"**種別:** {institution_data.iloc[0]['種別']}")
+            st.write(f"**医療機関番号:** {row_data['医療機関番号']}")
+            st.write(f"**医療機関記号番号:** {row_data['医療機関記号番号']}")
+            st.write(f"**種別:** {row_data['種別']}")
+            # Display bed information
+            bed_count = row_data.get('病床数', {})
+            
+            if bed_count and isinstance(bed_count, dict):
+                bed_display_parts = []
+                for bed_type, bed_number in bed_count.items():
+                    if bed_type is None and bed_number is not None:
+                        bed_display_parts.append(str(bed_number))
+                    elif bed_type is not None and bed_number is None:
+                        bed_display_parts.append(str(bed_type))
+                    elif bed_type is not None and bed_number is not None:
+                        bed_display_parts.append(f"{bed_type} {bed_number}")
+                
+                if bed_display_parts:
+                    st.write(f"**病床種類・病床数:** {' / '.join(bed_display_parts)}")
         
         with col2:
-            st.write(f"**郵便番号:** {institution_data.iloc[0]['医療機関所在地（郵便番号）']}")
-            st.write(f"**住所:** {institution_data.iloc[0]['医療機関所在地（住所）']}")
-            st.write(f"**電話番号:** {institution_data.iloc[0]['電話番号']}")
+            st.write(f"**郵便番号:** {row_data['医療機関所在地（郵便番号）']}")
+            st.write(f"**住所:** {row_data['医療機関所在地（住所）']}")
+            st.write(f"**電話番号:** {row_data['電話番号']}")
         
         st.divider()
         

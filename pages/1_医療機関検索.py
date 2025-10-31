@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+from utils import load_raw_data
 
 st.title("🏥 医療機関検索システム")
 
@@ -12,10 +12,6 @@ with col1:
 # Create display columns
 DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '医療機関記号番号', '種別', '届出数', 
                    '医療機関所在地（郵便番号）', '医療機関所在地（住所）', '電話番号', '病床数']
-
-@st.cache_data
-def load_raw_data():
-    return pd.read_excel("data/r7/tokyo.xlsx", skiprows=3)
 
 @st.cache_data
 def load_stats_data():

@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+from utils import load_raw_data
 
 st.title("📋 届出状況一覧")
 
@@ -9,10 +9,6 @@ if st.button("← ホームページに戻る"):
 
 # Configuration
 MAX_DISPLAY_COUNT = 100
-
-@st.cache_data
-def load_raw_data():
-    return pd.read_excel("data/r7/tokyo.xlsx", skiprows=3)
 
 @st.cache_data
 def load_filing_status_data():
