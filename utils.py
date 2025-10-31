@@ -55,3 +55,32 @@ def load_raw_data():
     
     return df
 
+def display_institution_basic_info(row_data):
+    """Display basic institution information in two columns"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write(f"**医療機関番号:** {row_data['医療機関番号']}")
+        st.write(f"**医療機関記号番号:** {row_data['医療機関記号番号']}")
+        st.write(f"**種別:** {row_data['種別']}")
+        # Display bed information
+        bed_count = row_data.get('病床数', {})
+        
+        if bed_count and isinstance(bed_count, dict):
+            bed_display_parts = []
+            for bed_type, bed_number in bed_count.items():
+                if bed_type is None and bed_number is not None:
+                    bed_display_parts.append(str(bed_number))
+                elif bed_type is not None and bed_number is None:
+                    bed_display_parts.append(str(bed_type))
+                elif bed_type is not None and bed_number is not None:
+                    bed_display_parts.append(f"{bed_type} {bed_number}")
+            
+            if bed_display_parts:
+                st.write(f"**病床種類・病床数:** {' / '.join(bed_display_parts)}")
+    
+    with col2:
+        st.write(f"**郵便番号:** {row_data['医療機関所在地（郵便番号）']}")
+        st.write(f"**住所:** {row_data['医療機関所在地（住所）']}")
+        st.write(f"**電話番号:** {row_data['電話番号']}")
+
