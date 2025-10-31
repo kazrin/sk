@@ -46,7 +46,7 @@ criteria_input = st.text_area(
     placeholder="施設基準1\n施設基準2\n施設基準3",
     key='facility_criteria_input',
     height=100,
-    help="空白の場合はすべて表示、入力時は完全一致する施設基準のみを表示します。入力後、テキストボックスからフォーカスを外すと絞り込みが反映されます。"
+    help="空白の場合はすべて表示、入力時は完全一致する施設基準のみを表示します。受理届出名称または受理記号のいずれかに一致するものが表示されます。入力後、テキストボックスからフォーカスを外すと絞り込みが反映されます。"
 )
 
 selected_facility_criteria = []
@@ -113,9 +113,12 @@ filing_status['届出医療機関割合'] = (
 ).round(2)
 
 # Filter by facility criteria (exact match if criteria are provided)
+# Match against either 受理届出名称 or 受理記号
 if selected_facility_criteria:
     # Filter filing statuses that exactly match the input criteria
-    mask = filing_status['受理届出名称'].isin(selected_facility_criteria)
+    name_mask = filing_status['受理届出名称'].isin(selected_facility_criteria)
+    symbol_mask = filing_status['受理記号'].isin(selected_facility_criteria)
+    mask = name_mask | symbol_mask
     filing_status = filing_status[mask]
 
 
