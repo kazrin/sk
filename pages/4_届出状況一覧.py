@@ -34,19 +34,17 @@ if all_bed_types:
         key='bed_type_multiselect'
     )
 
-# Facility criteria filter (改行区切り入力)
-facility_criteria_filter_enabled = st.checkbox("施設基準でフィルター", value=False, key='facility_criteria_filter_enabled')
+# Facility criteria filter (改行区切り入力, always enabled)
+criteria_input = st.text_area(
+    "施設基準を改行区切りで入力:",
+    placeholder="施設基準1\n施設基準2\n施設基準3",
+    key='facility_criteria_input',
+    height=100
+)
 
 selected_facility_criteria = []
-if facility_criteria_filter_enabled:
-    criteria_input = st.text_area(
-        "施設基準を改行区切りで入力:",
-        placeholder="施設基準1\n施設基準2\n施設基準3",
-        key='facility_criteria_input',
-        height=100
-    )
-    if criteria_input:
-        selected_facility_criteria = [line.strip() for line in criteria_input.split('\n') if line.strip()]
+if criteria_input:
+    selected_facility_criteria = [line.strip() for line in criteria_input.split('\n') if line.strip()]
 
 # Apply filters and calculate filing status
 st.write("### 集計結果")
@@ -103,12 +101,10 @@ filing_status['届出医療機関割合'] = (
     filing_status['届出医療機関数'] / total_institutions * 100
 ).round(2)
 
-# Filter by facility criteria if enabled
-if facility_criteria_filter_enabled and selected_facility_criteria:
-    # Filter filing statuses that match the input criteria
-    mask = filing_status['受理届出名称'].apply(
-        lambda x: any(criteria in str(x) for criteria in selected_facility_criteria)
-    )
+# Filter by facility criteria (exact match if criteria are provided)
+if selected_facility_criteria:
+    # Filter filing statuses that exactly match the input criteria
+    mask = filing_status['受理届出名称'].isin(selected_facility_criteria)
     filing_status = filing_status[mask]
 
 # Sort by count in descending order (default)
