@@ -237,10 +237,20 @@ if selected_institution:
         
         if all_filing_types and top_20_institutions:
             # Create cross-tabulation matrix
+            # Include target institution as the first column
+            all_institution_names = [selected_institution] + top_20_institutions
+            
             cross_tab_data = {}
             
             for filing_type in all_filing_types:
                 row = []
+                
+                # First, add target institution's filing status
+                target_filing_types_set = institution_filings_by_number.get(target_institution_number, set())
+                has_filing_target = filing_type in target_filing_types_set
+                row.append(has_filing_target)
+                
+                # Then, add top 20 institutions' filing status
                 for institution_name in top_20_institutions:
                     institution_number = institution_number_mapping.get(institution_name)
                     if institution_number:
@@ -252,14 +262,36 @@ if selected_institution:
                 cross_tab_data[filing_type] = row
             
             # Create DataFrame
-            cross_tab_df = pd.DataFrame(cross_tab_data, index=top_20_institutions)
+            cross_tab_df = pd.DataFrame(cross_tab_data, index=all_institution_names)
             # Transpose to have filing types as rows and institutions as columns
             cross_tab_df = cross_tab_df.T
             
+            # Filter: Show only filing types that target institution has NOT filed
+            show_only_unfiled = st.checkbox(
+                "対象医療機関が未届の施設基準のみ表示",
+                value=False,
+                key='show_only_unfiled_filter'
+            )
+            
+            if show_only_unfiled:
+                # Filter rows where target institution (first column) is False
+                filtered_cross_tab_df = cross_tab_df[cross_tab_df[selected_institution] == False]
+                st.write(f"**表示件数: {len(filtered_cross_tab_df)}件 (全{len(cross_tab_df)}件中)**")
+            else:
+                filtered_cross_tab_df = cross_tab_df
+            
             # Display the table
+            # Configure column width - make the first column (施設基準名) narrower
+            column_config = {}
+            # Set width for filing type column (index column)
             st.dataframe(
-                cross_tab_df,
-                use_container_width=True
+                filtered_cross_tab_df,
+                use_container_width=True,
+                column_config={
+                    filtered_cross_tab_df.index.name if filtered_cross_tab_df.index.name else "施設基準": st.column_config.TextColumn(
+                        width="small"
+                    )
+                } if hasattr(st, 'column_config') else {}
             )
 else:
     st.info("医療機関検索ページから医療機関を検索して選択してください。")
