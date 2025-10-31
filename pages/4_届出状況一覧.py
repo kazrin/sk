@@ -13,8 +13,9 @@ with col1:
 # Load raw data
 df = load_raw_data()
 
-# Filters
-st.write("### フィルター")
+# Aggregation conditions
+st.write("### 集計条件")
+st.caption("集計対象とする医療機関の条件を設定します")
 
 # Bed type filter (always enabled, default to all)
 # Get all available bed types
@@ -31,15 +32,21 @@ if all_bed_types:
         "病床種類を選択:",
         options=all_bed_types,
         default=all_bed_types,  # Default to all bed types selected
-        key='bed_type_multiselect'
+        key='bed_type_multiselect',
+        help="選択した病床種類を持つ医療機関の届出のみを集計対象とします"
     )
+
+# Display filter
+st.write("### 表示フィルター")
+st.caption("集計結果の表示内容を絞り込みます")
 
 # Facility criteria filter (改行区切り入力, always enabled)
 criteria_input = st.text_area(
     "施設基準を改行区切りで入力:",
     placeholder="施設基準1\n施設基準2\n施設基準3",
     key='facility_criteria_input',
-    height=100
+    height=100,
+    help="空白の場合はすべて表示、入力時は完全一致する施設基準のみを表示します。入力後、テキストボックスからフォーカスを外すと絞り込みが反映されます。"
 )
 
 selected_facility_criteria = []
