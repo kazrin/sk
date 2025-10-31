@@ -89,19 +89,23 @@ if selected_bed_types:
 total_institutions = filtered_df['医療機関番号'].nunique()
 
 # Calculate filing status counts and institution counts
-filing_status = filtered_df['受理届出名称'].value_counts().reset_index()
-filing_status.columns = ['受理届出名称', '件数']
+# Group by both 受理届出名称 and 受理記号 (1-to-1 relationship)
+groupby_columns = ['受理届出名称']
+if '受理記号' in filtered_df.columns:
+    groupby_columns.append('受理記号')
 
-# Calculate number of institutions filing each status (by institution number)
-institution_counts = (
-    filtered_df.groupby('受理届出名称')['医療機関番号']
-    .nunique()
+filing_status = (
+    filtered_df.groupby(groupby_columns)
+    .agg({
+        '医療機関番号': 'nunique',  # Number of unique institutions
+        '受理届出名称': 'count'     # Total count of filings
+    })
+    .rename(columns={
+        '医療機関番号': '届出医療機関数',
+        '受理届出名称': '件数'
+    })
     .reset_index()
 )
-institution_counts.columns = ['受理届出名称', '届出医療機関数']
-
-# Merge with filing status
-filing_status = filing_status.merge(institution_counts, on='受理届出名称', how='left')
 
 # Calculate percentage
 filing_status['届出医療機関割合'] = (
@@ -113,6 +117,7 @@ if selected_facility_criteria:
     # Filter filing statuses that exactly match the input criteria
     mask = filing_status['受理届出名称'].isin(selected_facility_criteria)
     filing_status = filing_status[mask]
+
 
 # Sort by count in descending order (default)
 filing_status = filing_status.sort_values('件数', ascending=False)
@@ -126,9 +131,12 @@ if len(filing_status) > 0:
     display_df = filing_status.copy()
     display_df['届出医療機関割合'] = display_df['届出医療機関割合'].apply(lambda x: f"{x:.2f}%")
     
-    # Reorder columns
-    display_columns = ['受理届出名称', '件数', '届出医療機関割合']
-    display_df = display_df[display_columns]
+    # Reorder columns (include 受理記号 if available)
+    display_columns = ['受理届出名称']
+    if '受理記号' in display_df.columns:
+        display_columns.append('受理記号')
+    display_columns.extend(['件数', '届出医療機関割合'])
+    display_df = display_df[[col for col in display_columns if col in display_df.columns]]
     
     st.dataframe(
         display_df,
