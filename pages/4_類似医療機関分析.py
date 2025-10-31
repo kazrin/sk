@@ -14,37 +14,37 @@ def calculate_jaccard_similarity(set1, set2):
 
 def find_similar_institutions(target_institution, df):
     """Find similar institutions based on filing contents"""
+    # Pre-group all institutions' filings (much faster than filtering in loop)
+    institution_filings_dict = (
+        df.groupby('医療機関名称')['受理届出名称']
+        .apply(lambda x: set(x.dropna().unique()))
+        .to_dict()
+    )
+    
     # Get target institution's filings
-    target_data = df[df['医療機関名称'] == target_institution]
-    target_filings = set(target_data['受理届出名称'].dropna().unique())
+    target_filings = institution_filings_dict.get(target_institution, set())
     
     if len(target_filings) == 0:
         return pd.DataFrame()
     
-    # Get all institutions and their filings
-    institution_filings = {}
-    for institution in df['医療機関名称'].unique():
-        if institution != target_institution:
-            institution_data = df[df['医療機関名称'] == institution]
-            filings = set(institution_data['受理届出名称'].dropna().unique())
-            institution_filings[institution] = filings
-    
-    # Calculate similarities
+    # Calculate similarities for all other institutions
     similarities = []
-    for institution, filings in institution_filings.items():
-        if len(filings) > 0:
-            similarity = calculate_jaccard_similarity(target_filings, filings)
-            overlap = target_filings.intersection(filings)
-            unique_to_target = target_filings - filings
-            unique_to_institution = filings - target_filings
-            
-            similarities.append({
-                '医療機関名称': institution,
-                '類似度': similarity,
-                '重複届出数': len(overlap),
-                '対象機関のみの届出数': len(unique_to_target),
-                '類似機関のみの届出数': len(unique_to_institution),
-            })
+    for institution, filings in institution_filings_dict.items():
+        if institution == target_institution or len(filings) == 0:
+            continue
+        
+        similarity = calculate_jaccard_similarity(target_filings, filings)
+        overlap = target_filings.intersection(filings)
+        unique_to_target = target_filings - filings
+        unique_to_institution = filings - target_filings
+        
+        similarities.append({
+            '医療機関名称': institution,
+            '類似度': similarity,
+            '重複届出数': len(overlap),
+            '対象機関のみの届出数': len(unique_to_target),
+            '類似機関のみの届出数': len(unique_to_institution),
+        })
     
     # Convert to DataFrame and sort by similarity
     result_df = pd.DataFrame(similarities)
@@ -76,8 +76,6 @@ if selected_institution:
     
     with st.spinner("類似医療機関を計算中..."):
         similar_df = find_similar_institutions(selected_institution, df)
-    
-    st.write(f"**類似度上位{len(similar_df)}件の医療機関**")
     
     # Display detailed table
     display_columns = ['医療機関名称', '類似度', '重複届出数', '対象機関のみの届出数', '類似機関のみの届出数']
