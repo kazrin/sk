@@ -13,6 +13,20 @@ with col1:
 DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '医療機関記号番号', '種別', '届出数', 
                    '医療機関所在地（郵便番号）', '医療機関所在地（住所）', '電話番号', '病床数']
 
+def format_bed_count(bed_count):
+    """Format bed count dict to display string"""
+    if not isinstance(bed_count, dict) or not bed_count:
+        return ""
+    bed_parts = []
+    for bed_type, bed_number in bed_count.items():
+        if bed_type is None and bed_number is not None:
+            bed_parts.append(str(bed_number))
+        elif bed_type is not None and bed_number is None:
+            bed_parts.append(str(bed_type))
+        elif bed_type is not None and bed_number is not None:
+            bed_parts.append(f"{bed_type} {bed_number}")
+    return " / ".join(bed_parts)
+
 @st.cache_data
 def load_stats_data():
     df = load_raw_data()
@@ -52,6 +66,19 @@ if search_term:
         # Create display dataframe
         display_df = filtered_institutions[available_columns].copy()
         
+        # Format bed count for display
+        if '病床数' in display_df.columns:
+            display_df['病床種類・病床数'] = display_df['病床数'].apply(format_bed_count)
+            # Remove original 病床数 column and reorder columns
+            columns_to_display = [col for col in display_df.columns if col not in ['病床数', '病床種類・病床数']]
+            # Insert 病床種類・病床数 at appropriate position
+            if '届出数' in columns_to_display:
+                idx = columns_to_display.index('届出数')
+                columns_to_display.insert(idx + 1, '病床種類・病床数')
+            else:
+                columns_to_display.append('病床種類・病床数')
+            display_df = display_df[columns_to_display]
+        
         # Display results in table format
         st.dataframe(
             display_df,
@@ -84,6 +111,19 @@ else:
     
     # Create display dataframe
     display_df = institutions[available_columns].copy()
+    
+    # Format bed count for display
+    if '病床数' in display_df.columns:
+        display_df['病床種類・病床数'] = display_df['病床数'].apply(format_bed_count)
+        # Remove original 病床数 column and reorder columns
+        columns_to_display = [col for col in display_df.columns if col not in ['病床数', '病床種類・病床数']]
+        # Insert 病床種類・病床数 at appropriate position
+        if '届出数' in columns_to_display:
+            idx = columns_to_display.index('届出数')
+            columns_to_display.insert(idx + 1, '病床種類・病床数')
+        else:
+            columns_to_display.append('病床種類・病床数')
+        display_df = display_df[columns_to_display]
     
     # Display results in table format
     st.dataframe(
