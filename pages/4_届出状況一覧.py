@@ -16,26 +16,23 @@ df = load_raw_data()
 # Filters
 st.write("### フィルター")
 
-# Bed type filter
-bed_type_filter_enabled = st.checkbox("病床種類でフィルター", value=False, key='bed_type_filter_enabled')
+# Bed type filter (always enabled, default to all)
+# Get all available bed types
+all_bed_types = set()
+for bed_count in df['病床数']:
+    if isinstance(bed_count, dict):
+        bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
+        all_bed_types.update(bed_types)
+all_bed_types = sorted([bt for bt in all_bed_types if bt])
 
 selected_bed_types = []
-if bed_type_filter_enabled:
-    # Get all available bed types
-    all_bed_types = set()
-    for bed_count in df['病床数']:
-        if isinstance(bed_count, dict):
-            bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
-            all_bed_types.update(bed_types)
-    all_bed_types = sorted([bt for bt in all_bed_types if bt])
-    
-    if all_bed_types:
-        selected_bed_types = st.multiselect(
-            "病床種類を選択:",
-            options=all_bed_types,
-            default=[],
-            key='bed_type_multiselect'
-        )
+if all_bed_types:
+    selected_bed_types = st.multiselect(
+        "病床種類を選択:",
+        options=all_bed_types,
+        default=all_bed_types,  # Default to all bed types selected
+        key='bed_type_multiselect'
+    )
 
 # Facility criteria filter (改行区切り入力)
 facility_criteria_filter_enabled = st.checkbox("施設基準でフィルター", value=False, key='facility_criteria_filter_enabled')
@@ -54,9 +51,9 @@ if facility_criteria_filter_enabled:
 # Apply filters and calculate filing status
 st.write("### 集計結果")
 
-# Filter data by bed type if enabled
+# Filter data by bed type
 filtered_df = df.copy()
-if bed_type_filter_enabled and selected_bed_types:
+if selected_bed_types:
     # Get institutions (by institution number) that have selected bed types
     def aggregate_bed_types(group):
         """Aggregate all bed types from all records of an institution"""
@@ -118,10 +115,7 @@ if facility_criteria_filter_enabled and selected_facility_criteria:
 filing_status = filing_status.sort_values('件数', ascending=False)
 
 # Display summary
-st.write(f"**総届出種類数: {len(filing_status):,} 種類**")
 st.write(f"**対象医療機関数: {total_institutions:,} 件**")
-if bed_type_filter_enabled and selected_bed_types:
-    st.write(f"**選択された病床種類: {', '.join(selected_bed_types)}**")
 
 # Display in table format
 if len(filing_status) > 0:
@@ -130,7 +124,7 @@ if len(filing_status) > 0:
     display_df['届出医療機関割合'] = display_df['届出医療機関割合'].apply(lambda x: f"{x:.2f}%")
     
     # Reorder columns
-    display_columns = ['受理届出名称', '件数', '届出割合']
+    display_columns = ['受理届出名称', '件数', '届出医療機関割合']
     display_df = display_df[display_columns]
     
     st.dataframe(
