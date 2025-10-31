@@ -196,11 +196,71 @@ if selected_institution:
             use_container_width=True,
             hide_index=True
         )
-    else:
-        st.warning("類似する医療機関が見つかりませんでした。")
-    
-    # Add expandable details for each institution
-    st.write("### 📋 詳細情報")
+        
+        # Create cross-tabulation table for top 20 similar institutions
+        st.write("### 📊 申請施設基準の届出状況（類似度上位20件）")
+        
+        # Get top 20 institutions
+        top_20_df = filtered_df.head(20).copy()
+        top_20_institutions = top_20_df['医療機関名称'].tolist()
+        
+        # Pre-compute institution filings by institution number (for performance)
+        institution_filings_by_number = (
+            df.groupby('医療機関番号')['受理届出名称']
+            .apply(lambda x: set(x.dropna().unique()))
+            .to_dict()
+        )
+        
+        # Get institution numbers for these institutions
+        institution_number_mapping = (
+            df.groupby('医療機関名称')['医療機関番号']
+            .first()
+            .to_dict()
+        )
+        
+        # Get all filing types (施設基準) from target and top 20 institutions
+        all_filing_types = set()
+        
+        # Get target institution's filing types
+        target_institution_number = institution_data.iloc[0]['医療機関番号']
+        target_filing_types = institution_filings_by_number.get(target_institution_number, set())
+        all_filing_types.update(target_filing_types)
+        
+        # Get top 20 institutions' filing types
+        for institution_name in top_20_institutions:
+            institution_number = institution_number_mapping.get(institution_name)
+            if institution_number:
+                filing_types = institution_filings_by_number.get(institution_number, set())
+                all_filing_types.update(filing_types)
+        
+        all_filing_types = sorted(list(all_filing_types))
+        
+        if all_filing_types and top_20_institutions:
+            # Create cross-tabulation matrix
+            cross_tab_data = {}
+            
+            for filing_type in all_filing_types:
+                row = []
+                for institution_name in top_20_institutions:
+                    institution_number = institution_number_mapping.get(institution_name)
+                    if institution_number:
+                        filing_types_set = institution_filings_by_number.get(institution_number, set())
+                        has_filing = filing_type in filing_types_set
+                        row.append(has_filing)
+                    else:
+                        row.append(False)
+                cross_tab_data[filing_type] = row
+            
+            # Create DataFrame
+            cross_tab_df = pd.DataFrame(cross_tab_data, index=top_20_institutions)
+            # Transpose to have filing types as rows and institutions as columns
+            cross_tab_df = cross_tab_df.T
+            
+            # Display the table
+            st.dataframe(
+                cross_tab_df,
+                use_container_width=True
+            )
 else:
     st.info("医療機関検索ページから医療機関を検索して選択してください。")
 
