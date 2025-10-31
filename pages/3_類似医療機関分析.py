@@ -12,6 +12,7 @@ def calculate_jaccard_similarity(set1, set2):
     union = len(set1.union(set2))
     return intersection / union if union > 0 else 0.0
 
+@st.cache_data
 def find_similar_institutions(target_institution, df):
     """Find similar institutions based on filing contents"""
     # Get target institution's number first
