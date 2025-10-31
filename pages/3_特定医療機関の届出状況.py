@@ -54,6 +54,11 @@ if selected_institution:
                 use_container_width=True,
                 hide_index=True
             )
+        
+        # Add navigation to similar institutions analysis
+        st.divider()
+        if st.button("🔍 類似医療機関を分析する", use_container_width=True):
+            st.switch_page("pages/4_類似医療機関分析.py")
     else:
         st.error("指定された医療機関のデータが見つかりませんでした。")
 else:
