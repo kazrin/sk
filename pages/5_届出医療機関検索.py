@@ -70,43 +70,50 @@ if filing_display_options:
     if selected_filing_name:
         st.write("### 検索結果")
         
-        # Filter institutions that have the selected filing
-        # Match against either 受理届出名称 or 受理記号
-        name_mask = df['受理届出名称'] == selected_filing_name
-        if selected_filing_symbol:
-            symbol_mask = df['受理記号'] == selected_filing_symbol
-            mask = name_mask | symbol_mask
-        else:
-            mask = name_mask
-        
-        matching_records = df[mask]
-        
-        if len(matching_records) > 0:
+        # Cached function to get search results
+        @st.cache_data
+        def search_institutions_by_filing(df, filing_name, filing_symbol=None):
+            """Search institutions by filing name or symbol"""
+            # Filter institutions that have the selected filing
+            # Match against either 受理届出名称 or 受理記号
+            name_mask = df['受理届出名称'] == filing_name
+            if filing_symbol:
+                symbol_mask = df['受理記号'] == filing_symbol
+                mask = name_mask | symbol_mask
+            else:
+                mask = name_mask
+            
+            matching_records = df[mask]
+            
+            if len(matching_records) == 0:
+                return pd.DataFrame()
+            
             # Get unique institutions (by institution number)
             institution_numbers = matching_records['医療機関番号'].unique()
             
             # Aggregate institution data
-            @st.cache_data
-            def get_institution_summary(df, institution_numbers):
-                institution_data = []
-                for inst_num in institution_numbers:
-                    inst_records = df[df['医療機関番号'] == inst_num]
-                    first_record = inst_records.iloc[0]
-                    
-                    institution_data.append({
-                        '医療機関名称': first_record['医療機関名称'],
-                        '医療機関番号': inst_num,
-                        '医療機関記号番号': first_record.get('医療機関記号番号', ''),
-                        '種別': first_record.get('種別', ''),
-                        '医療機関所在地（郵便番号）': first_record.get('医療機関所在地（郵便番号）', ''),
-                        '医療機関所在地（住所）': first_record.get('医療機関所在地（住所）', ''),
-                        '電話番号': first_record.get('電話番号', ''),
-                        '病床数': first_record.get('病床数', {}),
-                        '届出数': len(inst_records)
-                    })
-                return pd.DataFrame(institution_data)
-            
-            institution_summary = get_institution_summary(df, institution_numbers)
+            institution_data = []
+            for inst_num in institution_numbers:
+                inst_records = df[df['医療機関番号'] == inst_num]
+                first_record = inst_records.iloc[0]
+                
+                institution_data.append({
+                    '医療機関名称': first_record['医療機関名称'],
+                    '医療機関番号': inst_num,
+                    '医療機関記号番号': first_record.get('医療機関記号番号', ''),
+                    '種別': first_record.get('種別', ''),
+                    '医療機関所在地（郵便番号）': first_record.get('医療機関所在地（郵便番号）', ''),
+                    '医療機関所在地（住所）': first_record.get('医療機関所在地（住所）', ''),
+                    '電話番号': first_record.get('電話番号', ''),
+                    '病床数': first_record.get('病床数', {}),
+                    '届出数': len(inst_records)
+                })
+            return pd.DataFrame(institution_data)
+        
+        with st.spinner("検索中..."):
+            institution_summary = search_institutions_by_filing(df, selected_filing_name, selected_filing_symbol)
+        
+        if len(institution_summary) > 0:
             
             st.write(f"**該当医療機関数: {len(institution_summary):,} 件**")
             
