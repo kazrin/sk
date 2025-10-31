@@ -7,7 +7,7 @@ st.title("🏥 医療機関検索システム")
 col1, col2 = st.columns(2)
 with col1:
     if st.button("📋 届出状況一覧を見る"):
-        st.switch_page("pages/2_届出状況一覧.py")
+        st.switch_page("pages/4_届出状況一覧.py")
 
 # Create display columns
 DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '医療機関記号番号', '種別', '届出数', 
@@ -72,7 +72,7 @@ if search_term:
                     institution_name = institution_names[i + j]
                     if col.button(f"📋 {institution_name[:20]}...", key=f"result_btn_{i+j}_{institution_name}"):
                         st.session_state['selected_institution'] = institution_name
-                        st.switch_page("pages/3_特定医療機関の届出状況.py")
+                        st.switch_page("pages/2_特定医療機関の届出状況.py")
     else:
         st.warning("該当する医療機関が見つかりませんでした。")
 else:

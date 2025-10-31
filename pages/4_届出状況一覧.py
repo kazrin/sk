@@ -3,9 +3,11 @@ from utils import load_raw_data
 
 st.title("📋 届出状況一覧")
 
-# Back button
-if st.button("← ホームページに戻る"):
-    st.switch_page("main.py")
+# Navigation button
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("← ホームページに戻る"):
+        st.switch_page("main.py")
 
 # Configuration
 MAX_DISPLAY_COUNT = 100

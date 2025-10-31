@@ -25,7 +25,7 @@ with col1:
 
 with col2:
     if st.button("📋 届出状況一覧", use_container_width=True):
-        st.switch_page("pages/2_届出状況一覧.py")
+        st.switch_page("pages/4_届出状況一覧.py")
 
 with col3:
     st.info("特定医療機関の届出状況は、医療機関検索からアクセスできます")
