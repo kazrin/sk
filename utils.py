@@ -34,10 +34,14 @@ def load_raw_data():
                 
                 # Extract type and number from each part
                 # Pattern: 文字列部分と数値部分を分離
-                match = re.match(r'^(.+?)\s+(\d+)$', part)
+                # 全角・半角スペースに対応
+                match = re.match(r'^(.+?)[\s\u3000]+(\d+)$', part)
                 if match:
                     # Both type and number
-                    bed_type = match.group(1).strip()
+                    bed_type = match.group(1).strip().replace('\u3000', ' ').strip()  # 全角スペースを半角に変換してトリム
+                    # 重複した単語を除去（例: "一般 一般" -> "一般"）
+                    words = bed_type.split()
+                    bed_type = ' '.join(sorted(set(words), key=words.index))  # 順序を保ちつつ重複除去
                     bed_number = int(match.group(2))
                     bed_dict[bed_type] = bed_number
                 else:
@@ -45,8 +49,12 @@ def load_raw_data():
                     if part.isdigit():
                         bed_dict[None] = int(part)
                     else:
-                        # Type only
-                        bed_dict[part] = None
+                        # Type only - 全角スペースを処理して重複除去
+                        bed_type = part.strip().replace('\u3000', ' ').strip()
+                        words = bed_type.split()
+                        bed_type = ' '.join(sorted(set(words), key=words.index))  # 順序を保ちつつ重複除去
+                        if bed_type:  # 空文字列でない場合のみ
+                            bed_dict[bed_type] = None
             
             bed_dicts.append(bed_dict)
         
