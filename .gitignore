@@ -49,8 +49,3 @@ Thumbs.db
 
 # UV
 # uv.lock should be committed to ensure reproducible builds
-
-# Data files
-*.feather
-*.xlsx
-data/
