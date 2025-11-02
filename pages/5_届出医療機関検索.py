@@ -145,7 +145,7 @@ if filing_display_options:
             
             st.dataframe(
                 display_df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
             

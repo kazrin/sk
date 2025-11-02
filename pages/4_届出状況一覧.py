@@ -143,7 +143,7 @@ if len(filing_status) > 0:
     
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
 else:

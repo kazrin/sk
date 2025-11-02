@@ -38,7 +38,7 @@ if selected_institution:
         # Display as table
         st.dataframe(
             display_data,
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     

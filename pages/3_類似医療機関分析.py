@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import ast
 from utils import load_raw_data, display_institution_basic_info
 
 st.title("🔍 類似医療機関分析")
@@ -36,30 +37,27 @@ def find_similar_institutions(target_institution, df):
         .to_dict()
     )
     
-    # Pre-group all institutions' bed counts by institution number
-    def aggregate_bed_types(group):
-        """Aggregate all bed types from all records of an institution"""
-        all_bed_types = set()
-        for bed_count in group:
-            if isinstance(bed_count, dict):
-                # Get bed types and clean them (remove None, strip whitespace)
-                bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
-                all_bed_types.update(bed_types)
-        # Return sorted list of unique bed types
-        return sorted([bt for bt in all_bed_types if bt])
+    # Get bed counts for each institution using drop_duplicates
+    # This is more efficient than looping
+    unique_institutions = df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
     
-    institution_bed_types = (
-        df.groupby('医療機関番号')['病床数']
-        .apply(aggregate_bed_types)
-        .to_dict()
-    )
-    
-    # Get bed counts (dict) for each institution
-    institution_bed_counts = (
-        df.groupby('医療機関番号')['病床数']
-        .first()
-        .to_dict()
-    )
+    # Convert to dict, handling string to dict conversion
+    institution_bed_counts = {}
+    for _, row in unique_institutions.iterrows():
+        inst_num = row['医療機関番号']
+        bed_count = row['病床数']
+        
+        # If it's a string (JSON-like), convert to dict
+        if isinstance(bed_count, str):
+            try:
+                institution_bed_counts[inst_num] = ast.literal_eval(bed_count)
+            except:
+                institution_bed_counts[inst_num] = {}
+        # If already a dict, use as is
+        elif isinstance(bed_count, dict):
+            institution_bed_counts[inst_num] = bed_count
+        else:
+            institution_bed_counts[inst_num] = {}
     
     # Get target institution's filings
     target_filings = institution_filings_dict.get(target_institution_number, set())
@@ -78,9 +76,20 @@ def find_similar_institutions(target_institution, df):
         unique_to_target = target_filings - filings
         unique_to_institution = filings - target_filings
         
-        # Get bed types and bed count for this institution
-        bed_types = institution_bed_types.get(institution_number, [])
+        # Get bed count from our mapping (should already be a dict)
         bed_count = institution_bed_counts.get(institution_number, {})
+        
+        # Ensure it's a dict and make a copy
+        if not isinstance(bed_count, dict):
+            bed_count = {}
+        else:
+            bed_count = dict(bed_count)
+        
+        # Extract bed types from bed count dict (keys are bed types)
+        bed_types = []
+        if bed_count:
+            bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
+            bed_types = sorted([bt for bt in bed_types if bt])  # Remove empty strings and sort
         
         # Get institution name
         institution_name = institution_name_mapping.get(institution_number, f"医療機関番号: {institution_number}")
@@ -96,7 +105,15 @@ def find_similar_institutions(target_institution, df):
         })
     
     # Convert to DataFrame and sort by similarity
+    if not similarities:
+        return pd.DataFrame()
+    
     result_df = pd.DataFrame(similarities)
+    
+    # Ensure病床数 column is treated as object type to preserve dicts
+    if '病床数' in result_df.columns:
+        result_df['病床数'] = result_df['病床数'].astype(object)
+    
     if len(result_df) > 0:
         result_df = result_df.sort_values('類似度', ascending=False)
     
@@ -130,8 +147,13 @@ if selected_institution:
         # Get target institution's bed types for default filter
         target_bed_count = row_data.get('病床数', {})
         target_bed_types = []
+        if isinstance(target_bed_count, str):
+            try:
+                target_bed_count = ast.literal_eval(target_bed_count)
+            except:
+                target_bed_count = {}
         if isinstance(target_bed_count, dict):
-            target_bed_types = [k for k in target_bed_count.keys() if k is not None]
+            target_bed_types = [str(k).strip() for k in target_bed_count.keys() if k is not None and str(k).strip()]
         
         # Get all available bed types from similar institutions
         all_bed_types = set()
@@ -142,9 +164,10 @@ if selected_institution:
                 all_bed_types.update(cleaned_types)
         all_bed_types = sorted([bt for bt in all_bed_types if bt])  # Remove empty strings
         
-        # Bed type filter (multiselect)
+        # Bed type filter (multiselect) - default to target institution's bed types only
         if all_bed_types:
-            default_selection = target_bed_types if target_bed_types else all_bed_types
+            # Default to only the target institution's bed types
+            default_selection = [bt for bt in target_bed_types if bt in all_bed_types]
             selected_bed_types = st.multiselect(
                 "病床種類でフィルター:",
                 options=all_bed_types,
@@ -172,16 +195,34 @@ if selected_institution:
         display_columns = ['医療機関名称', '病床数', '類似度', '重複届出数', '対象機関のみの届出数', '類似機関のみの届出数']
         
         # Format similarity as percentage and format bed count for display
-        display_df = filtered_df[display_columns].copy()
+        # Use deep copy to ensure dicts are preserved
+        display_df = filtered_df[display_columns].copy(deep=True)
         display_df['類似度'] = display_df['類似度'].apply(lambda x: f"{x:.1%}")
         
         # Format bed count (dict) to display string
         def format_bed_count(bed_count):
             """Format bed count dict to display string"""
-            if not isinstance(bed_count, dict) or not bed_count:
+            # Convert string to dict if needed
+            if isinstance(bed_count, str):
+                try:
+                    bed_count = ast.literal_eval(bed_count)
+                except:
+                    return ""
+            
+            # Handle non-dict cases
+            if bed_count is None:
                 return ""
+            if not isinstance(bed_count, dict):
+                return ""
+            if not bed_count:  # Empty dict
+                return ""
+            
             bed_parts = []
             for bed_type, bed_number in bed_count.items():
+                # Skip if both are None
+                if bed_type is None and bed_number is None:
+                    continue
+                # Handle different combinations
                 if bed_type is None and bed_number is not None:
                     bed_parts.append(str(bed_number))
                 elif bed_type is not None and bed_number is None:
@@ -194,7 +235,7 @@ if selected_institution:
         
         st.dataframe(
             display_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
@@ -300,12 +341,8 @@ if selected_institution:
             # Display the table
             st.dataframe(
                 display_df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
 else:
     st.info("医療機関検索ページから医療機関を検索して選択してください。")
-
-# Back button
-if st.button("← ホームページに戻る"):
-    st.switch_page("main.py")
