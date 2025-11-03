@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from utils import load_raw_data
 
-st.title("📋 届出状況一覧")
+st.title("📋 施設基準別届出数")
 
 # Navigation button
 col1, col2 = st.columns(2)

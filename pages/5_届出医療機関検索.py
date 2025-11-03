@@ -10,8 +10,8 @@ with col1:
     if st.button("← ホームページに戻る"):
         st.switch_page("main.py")
 with col2:
-    if st.button("📋 届出状況一覧を見る"):
-        st.switch_page("pages/4_届出状況一覧.py")
+    if st.button("📋 施設基準別届出数を見る"):
+        st.switch_page("pages/4_施設基準別届出数.py")
 
 # Load data
 df = load_raw_data()

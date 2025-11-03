@@ -25,7 +25,7 @@ def display_institution_basic_info(row_data):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write(f"**医療機関番号:** {row_data['医療機関番号']}")
+        st.write(f"**医療機関番号:** {int(row_data['医療機関番号'])}")
         st.write(f"**医療機関記号番号:** {row_data['医療機関記号番号']}")
         st.write(f"**都道府県:** {row_data['都道府県名']}")
         st.write(f"**病床数:** {row_data['病床数']}")
