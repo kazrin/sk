@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+import ast
 from pathlib import Path
 
 feather_file_path = "data/2025/10/all.feather"
@@ -12,6 +13,13 @@ def load_raw_data():
     # pandas feather format merges all dict keys across rows, adding None for missing keys
     if '病床数' in df.columns:
         def clean_bed_dict(bed_count):
+            # Convert string representation to dict if needed
+            if isinstance(bed_count, str):
+                try:
+                    bed_count = ast.literal_eval(bed_count)
+                except:
+                    return {}
+            
             if isinstance(bed_count, dict):
                 # Keep only keys with non-None values
                 return {k: v for k, v in bed_count.items() if v is not None}

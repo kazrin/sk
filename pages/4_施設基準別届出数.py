@@ -26,7 +26,13 @@ for bed_count in df['病床数']:
         all_bed_types.update(bed_types)
 all_bed_types = sorted([bt for bt in all_bed_types if bt])
 
-selected_bed_types = []
+# Debug: Show data info
+with st.expander("デバッグ情報（クリックして展開）"):
+    st.write(f"総レコード数: {len(df)}")
+    st.write(f"病床数列のデータ型サンプル: {type(df['病床数'].iloc[0]) if len(df) > 0 else 'N/A'}")
+    st.write(f"病床数サンプル: {df['病床数'].iloc[0] if len(df) > 0 else 'N/A'}")
+    st.write(f"取得した病床種別: {all_bed_types}")
+
 if all_bed_types:
     selected_bed_types = st.multiselect(
         "病床種類を選択:",
@@ -35,6 +41,9 @@ if all_bed_types:
         key='bed_type_multiselect',
         help="選択した病床種類を持つ医療機関の届出のみを集計対象とします"
     )
+else:
+    st.warning("⚠️ 病床種別データが見つかりませんでした。すべての医療機関を対象に集計します。")
+    selected_bed_types = []
 
 # Display filter
 st.write("### 表示フィルター")
@@ -52,9 +61,6 @@ criteria_input = st.text_area(
 selected_facility_criteria = []
 if criteria_input:
     selected_facility_criteria = [line.strip() for line in criteria_input.split('\n') if line.strip()]
-
-# Apply filters and calculate filing status
-st.write("### 集計結果")
 
 # Filter data by bed type
 filtered_df = df.copy()
@@ -90,12 +96,8 @@ total_institutions = filtered_df['医療機関番号'].nunique()
 
 # Calculate filing status counts and institution counts
 # Group by both 受理届出名称 and 受理記号 (1-to-1 relationship)
-groupby_columns = ['受理届出名称']
-if '受理記号' in filtered_df.columns:
-    groupby_columns.append('受理記号')
-
 filing_status = (
-    filtered_df.groupby(groupby_columns)
+    filtered_df.groupby(['受理届出名称', '受理記号'])
     .agg({
         '医療機関番号': 'nunique',  # Number of unique institutions
         '受理届出名称': 'count'     # Total count of filings
@@ -134,12 +136,9 @@ if len(filing_status) > 0:
     display_df = filing_status.copy()
     display_df['届出医療機関割合'] = display_df['届出医療機関割合'].apply(lambda x: f"{x:.2f}%")
     
-    # Reorder columns (include 受理記号 if available)
-    display_columns = ['受理届出名称']
-    if '受理記号' in display_df.columns:
-        display_columns.append('受理記号')
-    display_columns.extend(['件数', '届出医療機関割合'])
-    display_df = display_df[[col for col in display_columns if col in display_df.columns]]
+    # Reorder columns
+    display_columns = ['受理届出名称', '受理記号', '件数', '届出医療機関数', '届出医療機関割合']
+    display_df = display_df[display_columns]
     
     st.dataframe(
         display_df,
