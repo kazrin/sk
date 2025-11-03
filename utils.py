@@ -6,7 +6,7 @@ from pathlib import Path
 
 feather_file_path = "data/2025/10/all.feather"
 
-@st.cache_data
+@st.cache_data(hash_funcs={dict: lambda x: str(x)})
 def load_raw_data():
     df = pd.read_feather(feather_file_path)
     # Clean up bed count dicts: remove keys with None values

@@ -71,7 +71,7 @@ if filing_display_options:
         st.write("### 検索結果")
         
         # Cached function to get search results
-        @st.cache_data
+        @st.cache_data(hash_funcs={dict: lambda x: str(x)})
         def search_institutions_by_filing(df, filing_name, filing_symbol=None):
             """Search institutions by filing name or symbol"""
             # Filter institutions that have the selected filing

@@ -26,6 +26,9 @@ def create_feather_file(input_dir_path, output_file_path):
     
     df = pd.concat(all_dataframes, ignore_index=True)
     
+    # Parse 病床数 column first (before grouping)
+    # This needs to be done before grouping to ensure all rows have processed 病床数
+    
     # Parse 病床数 column and convert to dict format
     # Formats supported:
     # - "一般　　22" -> {"一般": 22}
@@ -87,8 +90,63 @@ def create_feather_file(input_dir_path, output_file_path):
         # Overwrite 病床数 column with dict format
         df['病床数'] = bed_dicts
     
+    # Aggregate data by 医療機関番号 and 受理番号 to make them primary keys
+    # Create a function to aggregate remarks into a dict
+    def aggregate_remarks(group):
+        remarks_dict = {}
+        if '備考（見出し）' in group.columns and '備考（データ）' in group.columns:
+            for _, row in group.iterrows():
+                header = row['備考（見出し）']
+                data = row['備考（データ）']
+                # Skip if header is blank/NaN
+                if pd.notna(header) and str(header).strip():
+                    # Use data value, or empty string if data is blank
+                    data_value = str(data).strip() if pd.notna(data) and str(data).strip() else ''
+                    remarks_dict[str(header).strip()] = data_value
+        return remarks_dict
+    
+    # Define aggregation functions for each column type
+    def take_first_dict(x):
+        """Take the first non-empty dict, or return empty dict if all are empty"""
+        for val in x:
+            if isinstance(val, dict) and val:
+                return val
+        return x.iloc[0] if len(x) > 0 else {}
+    
+    agg_dict = {}
+    for col in df.columns:
+        if col in ['医療機関番号', '受理番号']:
+            continue  # Skip grouping keys
+        elif col == '備考（見出し）' or col == '備考（データ）':
+            continue  # Will be aggregated separately
+        elif col == '病床数':
+            # For dict columns, take the first non-empty dict, or merge if needed
+            agg_dict[col] = take_first_dict
+        else:
+            # For other columns, take the first non-null value
+            agg_dict[col] = 'first'
+    
+    # Group by 医療機関番号 and 受理番号
+    grouped = df.groupby(['医療機関番号', '受理番号'], dropna=False)
+    
+    # Aggregate remarks
+    aggregated_remarks = grouped.apply(aggregate_remarks).reset_index(name='備考集約')
+    
+    # Aggregate other columns
+    df_agg = grouped.agg(agg_dict).reset_index()
+    
+    # Merge aggregated remarks
+    df = df_agg.merge(aggregated_remarks[['医療機関番号', '受理番号', '備考集約']], 
+                        on=['医療機関番号', '受理番号'], how='left')
+    
+    # Fill NaN with empty dict for 備考集約
+    df['備考集約'] = df['備考集約'].apply(lambda x: x if isinstance(x, dict) else {})
+    
     # assert len(df["都道府県名"].unique()) == 47, f"Some prefectures are missing.. {df["都道府県名"].unique()}"
-    df.to_feather(output_file_path)
+
+    df.drop('備考集約', axis=1).to_feather(output_file_path)
+
+    return df
 
 
 if __name__ == "__main__":
@@ -96,4 +154,4 @@ if __name__ == "__main__":
     parser.add_argument("--input-dir-path", type=str, help="input directory path that xlsx files are located. e.g. data/2025/10")
     parser.add_argument("--output-file-path", type=str, help="output feather file path. e.g. data/2025/10/all.feather")
     args = parser.parse_args()
-    create_feather_file(args.input_dir_path, args.output_file_path)
+    df = create_feather_file(args.input_dir_path, args.output_file_path)

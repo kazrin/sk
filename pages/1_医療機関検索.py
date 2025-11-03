@@ -11,7 +11,7 @@ DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '都道府県名'
                    '医療機関所在地（郵便番号）', '医療機関所在地（住所）', 
                    '電話番号', 'FAX番号', '医療機関記号番号', '種別']
 
-@st.cache_data
+@st.cache_data(hash_funcs={dict: lambda x: str(x)})
 def load_stats_data():
     df = load_raw_data()
     institutions = df.groupby('医療機関名称').agg({
