@@ -344,5 +344,30 @@ if selected_institution:
                 width='stretch',
                 hide_index=True
             )
+        
+        # Add explanation about Jaccard similarity at the end
+        st.divider()
+        st.write("### 📖 類似度の計算方法について")
+        st.markdown("""
+        **Jaccard係数（Jaccard similarity coefficient）**を使用して類似度を計算しています。
+        
+        Jaccard係数は、2つの集合がどれだけ似ているかを測る指標で、以下の式で計算されます：
+        
+        $$
+        J(A, B) = \\frac{|A \\cap B|}{|A \\cup B|} = \\frac{\\text{共通要素数}}{\\text{全要素数}}
+        $$
+        
+        **具体例：**
+        
+        医療機関Aの届出施設基準：`{基本診療料, 特掲診療料1, 特掲診療料2}`
+        
+        医療機関Bの届出施設基準：`{基本診療料, 特掲診療料2, 特掲診療料3}`
+        
+        - **共通する届出（積集合）**: `{基本診療料, 特掲診療料2}` → 2個
+        - **すべての届出（和集合）**: `{基本診療料, 特掲診療料1, 特掲診療料2, 特掲診療料3}` → 4個
+        - **Jaccard係数**: 2 ÷ 4 = 0.5 (50%)
+        
+        Jaccard係数は0から1の値を取り、1に近いほど類似度が高く、0に近いほど類似度が低いことを示します。
+        """)
 else:
     st.info("医療機関検索ページから医療機関を検索して選択してください。")
