@@ -206,7 +206,7 @@ if selected_institution:
             # Get max bed counts for each selected bed type from filtered_df
             if selected_bed_types and len(filtered_df) > 0:
                 # Convert to ShisetsuKijunDataFrame if not already
-                from utils import ShisetsuKijunDataFrame
+                from dataframes import ShisetsuKijunDataFrame
                 if not isinstance(filtered_df, ShisetsuKijunDataFrame):
                     filtered_df = ShisetsuKijunDataFrame(filtered_df)
                 
@@ -230,7 +230,7 @@ if selected_institution:
         # Apply bed count filters
         if bed_count_filters and len(filtered_df) > 0:
             # Convert to ShisetsuKijunDataFrame if not already
-            from utils import ShisetsuKijunDataFrame
+            from dataframes import ShisetsuKijunDataFrame
             if not isinstance(filtered_df, ShisetsuKijunDataFrame):
                 filtered_df = ShisetsuKijunDataFrame(filtered_df)
             
