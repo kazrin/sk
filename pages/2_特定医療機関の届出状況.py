@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from utils import load_raw_data, display_institution_basic_info
 
 st.title("📋 特定医療機関の届出状況")
@@ -14,7 +13,7 @@ if selected_institution:
     df = load_raw_data()
     
     # Filter data for selected institution
-    institution_data = df[df['医療機関名称'] == selected_institution]
+    institution_data = df.filter_by_exact_institution_name(selected_institution)
     
     # Display basic information
     row_data = institution_data.iloc[0]

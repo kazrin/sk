@@ -294,4 +294,22 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
         
         mask = self['医療機関名称'].str.contains(search_term, case=case_sensitive, na=False)
         return self[mask].copy()
+    
+    def filter_by_exact_institution_name(self, institution_name):
+        """Filter dataframe by exact institution name match
+        
+        Args:
+            institution_name: Exact institution name to match
+            
+        Returns:
+            ShisetsuKijunDataFrame filtered by exact institution name
+        """
+        if not institution_name:
+            return self.copy()
+        
+        if '医療機関名称' not in self.columns:
+            return self.copy()
+        
+        mask = self['医療機関名称'] == institution_name
+        return self[mask].copy()
 
