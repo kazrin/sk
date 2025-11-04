@@ -55,7 +55,7 @@ search_term = st.text_input("医療機関名で検索", placeholder="医療機�
 
 # Filter results
 if search_term:
-    filtered_institutions = institutions[institutions['医療機関名称'].str.contains(search_term, case=False, na=False)]
+    filtered_institutions = institutions.filter_by_institution_name(search_term)
     
     if len(filtered_institutions) > 0:
         total_count = len(filtered_institutions)

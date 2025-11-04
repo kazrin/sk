@@ -275,4 +275,23 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
         }).reset_index()
         
         return self.__class__(institutions)
+    
+    def filter_by_institution_name(self, search_term, case_sensitive=False):
+        """Filter dataframe by institution name (partial match)
+        
+        Args:
+            search_term: String to search for in institution names
+            case_sensitive: Whether the search should be case sensitive (default: False)
+            
+        Returns:
+            ShisetsuKijunDataFrame filtered by institution name
+        """
+        if not search_term:
+            return self.copy()
+        
+        if '医療機関名称' not in self.columns:
+            return self.copy()
+        
+        mask = self['医療機関名称'].str.contains(search_term, case=case_sensitive, na=False)
+        return self[mask].copy()
 
