@@ -5,10 +5,9 @@
 ## データソース
 
 | 都道府県/機関名 | URL | 備考 |
-|---|---|
+| --- | --- | --- |
 | 北海道厚生局 | https://kouseikyoku.mhlw.go.jp/hokkaido/gyomu/gyomu/hoken_kikan/todokede_juri_ichiran.html | |
-| 東北 | 
-https://kouseikyoku.mhlw.go.jp/tohoku/gyomu/gyomu/hoken_kikan/documents/201805koushin.html | |
+| 東北 | https://kouseikyoku.mhlw.go.jp/tohoku/gyomu/gyomu/hoken_kikan/documents/201805koushin.html | |
 | 関東 | https://kouseikyoku.mhlw.go.jp/kantoshinetsu/chousa/kijyun.html | | 
 | 中部 | https://kouseikyoku.mhlw.go.jp/tokaihokuriku/newpage_00287.html | |
 | 近畿 | https://kouseikyoku.mhlw.go.jp/kinki/gyomu/gyomu/hoken_kikan/shitei_jokyo_00004.html | |
