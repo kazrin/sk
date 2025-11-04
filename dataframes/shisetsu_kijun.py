@@ -251,4 +251,28 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
         mask = name_mask | symbol_mask
         
         return self[mask].copy()
+    
+    def aggregate_by_institution_name(self):
+        """Aggregate data by institution name, grouping multiple filings per institution
+        
+        Returns:
+            ShisetsuKijunDataFrame with one row per institution, including filing count
+        """
+        institutions = self.groupby('医療機関名称').agg({
+            '医療機関番号': 'first',
+            '併設医療機関番号': 'first',
+            '医療機関記号番号': 'first',
+            '都道府県名': 'first',
+            '医療機関所在地（郵便番号）': 'first',
+            '医療機関所在地（住所）': 'first',
+            '電話番号': 'first',
+            'FAX番号': 'first',
+            '病床数': 'first',
+            '種別': 'first',
+            '受理届出名称': 'count'
+        }).rename(columns={
+            '受理届出名称': '届出数'  # Rename filing count column
+        }).reset_index()
+        
+        return self.__class__(institutions)
 

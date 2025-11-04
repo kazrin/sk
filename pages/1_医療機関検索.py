@@ -14,21 +14,7 @@ DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '都道府県名'
 @st.cache_data(hash_funcs={dict: lambda x: str(x)})
 def load_stats_data():
     df = load_raw_data()
-    institutions = df.groupby('医療機関名称').agg({
-        '医療機関番号': 'first',
-        '併設医療機関番号': 'first',
-        '医療機関記号番号': 'first',
-        '都道府県名': 'first',
-        '医療機関所在地（郵便番号）': 'first',
-        '医療機関所在地（住所）': 'first',
-        '電話番号': 'first',
-        'FAX番号': 'first',
-        '病床数': 'first',
-        '種別': 'first',
-        '受理届出名称': 'count'
-    }).rename(columns={
-        '受理届出名称': '届出数' # 届出数を受理届出名称の件数に変更
-    }).reset_index()
+    institutions = df.aggregate_by_institution_name()
     return institutions.sort_values('医療機関名称')
 
 def display_institutions_table(df, available_columns):
