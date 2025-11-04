@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils import load_raw_data
+from utils import load_raw_data, format_bed_count
 
 st.title("🔍 届出医療機関検索")
 
@@ -119,21 +119,6 @@ if filing_display_options:
             
             # Format bed count for display
             display_df = institution_summary.copy()
-            
-            def format_bed_count(bed_count):
-                """Format bed count dict to display string"""
-                if not isinstance(bed_count, dict) or not bed_count:
-                    return ""
-                bed_parts = []
-                for bed_type, bed_number in bed_count.items():
-                    if bed_type is None and bed_number is not None:
-                        bed_parts.append(str(bed_number))
-                    elif bed_type is not None and bed_number is None:
-                        bed_parts.append(str(bed_type))
-                    elif bed_type is not None and bed_number is not None:
-                        bed_parts.append(f"{bed_type} {bed_number}")
-                return " / ".join(bed_parts)
-            
             display_df['病床数'] = display_df['病床数'].apply(format_bed_count)
             
             # Select display columns

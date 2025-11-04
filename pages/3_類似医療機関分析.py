@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import ast
-from utils import load_raw_data, display_institution_basic_info
+from utils import load_raw_data, display_institution_basic_info, format_bed_count
 from dataframes import ShisetsuKijunDataFrame, JaccardSimilarityDataFrame
 
 st.title("🔍 類似医療機関分析")
@@ -124,39 +124,6 @@ if selected_institution:
         # Use deep copy to ensure dicts are preserved
         display_df = filtered_df[display_columns].copy(deep=True)
         display_df['類似度'] = display_df['類似度'].apply(lambda x: f"{x:.1%}")
-        
-        # Format bed count (dict) to display string
-        def format_bed_count(bed_count):
-            """Format bed count dict to display string"""
-            # Convert string to dict if needed
-            if isinstance(bed_count, str):
-                try:
-                    bed_count = ast.literal_eval(bed_count)
-                except:
-                    return ""
-            
-            # Handle non-dict cases
-            if bed_count is None:
-                return ""
-            if not isinstance(bed_count, dict):
-                return ""
-            if not bed_count:  # Empty dict
-                return ""
-            
-            bed_parts = []
-            for bed_type, bed_number in bed_count.items():
-                # Skip if both are None
-                if bed_type is None and bed_number is None:
-                    continue
-                # Handle different combinations
-                if bed_type is None and bed_number is not None:
-                    bed_parts.append(str(bed_number))
-                elif bed_type is not None and bed_number is None:
-                    bed_parts.append(str(bed_type))
-                elif bed_type is not None and bed_number is not None:
-                    bed_parts.append(f"{bed_type} {bed_number}")
-            return " / ".join(bed_parts)
-        
         display_df['病床数'] = display_df['病床数'].apply(format_bed_count)
         
         st.dataframe(

@@ -1,4 +1,5 @@
 import streamlit as st
+import ast
 from pathlib import Path
 from dataframes import ShisetsuKijunDataFrame
 
@@ -9,6 +10,45 @@ feather_file_path = "data/2025/10/all.feather"
 def load_raw_data():
     """Load raw data from feather file"""
     return ShisetsuKijunDataFrame.from_feather(feather_file_path)
+
+
+def format_bed_count(bed_count):
+    """Format bed count dict to display string
+    
+    Args:
+        bed_count: Bed count dict, string representation, or None
+        
+    Returns:
+        Formatted string representation of bed count (e.g., "一般 20 / 療養 10")
+    """
+    # Convert string to dict if needed
+    if isinstance(bed_count, str):
+        try:
+            bed_count = ast.literal_eval(bed_count)
+        except:
+            return ""
+    
+    # Handle non-dict cases
+    if bed_count is None:
+        return ""
+    if not isinstance(bed_count, dict):
+        return ""
+    if not bed_count:  # Empty dict
+        return ""
+    
+    bed_parts = []
+    for bed_type, bed_number in bed_count.items():
+        # Skip if both are None
+        if bed_type is None and bed_number is None:
+            continue
+        # Handle different combinations
+        if bed_type is None and bed_number is not None:
+            bed_parts.append(str(bed_number))
+        elif bed_type is not None and bed_number is None:
+            bed_parts.append(str(bed_type))
+        elif bed_type is not None and bed_number is not None:
+            bed_parts.append(f"{bed_type} {bed_number}")
+    return " / ".join(bed_parts)
 
 
 def display_institution_basic_info(row_data):
