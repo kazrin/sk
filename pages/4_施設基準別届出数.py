@@ -26,13 +26,6 @@ for bed_count in df['病床数']:
         all_bed_types.update(bed_types)
 all_bed_types = sorted([bt for bt in all_bed_types if bt])
 
-# Debug: Show data info
-with st.expander("デバッグ情報（クリックして展開）"):
-    st.write(f"総レコード数: {len(df)}")
-    st.write(f"病床数列のデータ型サンプル: {type(df['病床数'].iloc[0]) if len(df) > 0 else 'N/A'}")
-    st.write(f"病床数サンプル: {df['病床数'].iloc[0] if len(df) > 0 else 'N/A'}")
-    st.write(f"取得した病床種別: {all_bed_types}")
-
 if all_bed_types:
     selected_bed_types = st.multiselect(
         "病床種類を選択:",

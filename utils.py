@@ -21,8 +21,17 @@ def load_raw_data():
                     return {}
             
             if isinstance(bed_count, dict):
-                # Keep only keys with non-None values
-                return {k: v for k, v in bed_count.items() if v is not None}
+                # Keep only keys with non-None values and ensure values are int
+                cleaned = {}
+                for k, v in bed_count.items():
+                    if v is not None:
+                        # Convert value to int if it's a number
+                        try:
+                            cleaned[k] = int(v)
+                        except (ValueError, TypeError):
+                            # If conversion fails, skip this entry
+                            continue
+                return cleaned
             return bed_count
         df['病床数'] = df['病床数'].apply(clean_bed_dict)
     return df

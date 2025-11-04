@@ -1,7 +1,7 @@
 import streamlit as st
 from utils import load_raw_data
 
-st.title("🏥 医療機関検索システム")
+st.title("🏥 医科医療機関検索")
 
 # Maximum number of results to display
 MAX_DISPLAY_RESULTS = 500
