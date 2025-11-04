@@ -166,95 +166,80 @@ if selected_institution:
         
         # Initialize selected_bed_types
         selected_bed_types = []
-        
-        # Filter section header
-        st.write("### フィルター条件")
-        st.caption("類似医療機関の検索結果を絞り込みます")
-        
-        # Bed type filter (multiselect) - default to target institution's bed types only
-        if all_bed_types:
-            # Default to only the target institution's bed types
-            default_selection = [bt for bt in target_bed_types if bt in all_bed_types]
-            selected_bed_types = st.multiselect(
-                "病床種類でフィルター:",
-                options=all_bed_types,
-                default=default_selection,
-                key='bed_type_filter',
-                help="選択した病床種類を持つ医療機関のみを表示します"
-            )
-            
-            # Filter by selected bed types
-            if selected_bed_types:
-                # Filter institutions that have at least one of the selected bed types
-                mask = similar_df['病床種類'].apply(
-                    lambda x: bool(set(x).intersection(set(selected_bed_types)))
-                )
-                filtered_df = similar_df[mask].copy()
-            else:
-                # If no selection, show all
-                filtered_df = similar_df.copy()
-        else:
-            # No bed types available, show all
-            filtered_df = similar_df.copy()
-        
-        # Bed count filter by bed type
-        if selected_bed_types:
-            st.write("")
-            st.caption("選択した病床種類の病床数範囲でフィルターします")
-        
-        # Get min and max bed counts for each selected bed type from filtered_df
-        bed_count_ranges = {}
-        if selected_bed_types and len(filtered_df) > 0:
-            # Get unique institutions with their bed counts (more efficient)
-            unique_institutions = filtered_df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
-            
-            # Collect all bed counts for all selected bed types in a single pass
-            bed_counts_by_type = {bed_type: [] for bed_type in selected_bed_types}
-            
-            # Single loop through unique institutions (direct Series iteration is faster than iterrows)
-            bed_count_series = unique_institutions['病床数']
-            for bed_count_dict in bed_count_series:
-                if isinstance(bed_count_dict, dict):
-                    for bed_type in selected_bed_types:
-                        if bed_type in bed_count_dict:
-                            bed_num = bed_count_dict[bed_type]
-                            if isinstance(bed_num, (int, float)) and bed_num is not None:
-                                bed_counts_by_type[bed_type].append(bed_num)
-            
-            # Calculate min/max for each bed type
-            for bed_type, bed_counts in bed_counts_by_type.items():
-                if bed_counts:
-                    bed_count_ranges[bed_type] = {
-                        'min': int(min(bed_counts)),
-                        'max': int(max(bed_counts))
-                    }
-        
-        # Create bed count filters for each selected bed type
         bed_count_filters = {}
-        if bed_count_ranges:
-            cols = st.columns(min(len(bed_count_ranges), 3))
-            for idx, (bed_type, range_info) in enumerate(bed_count_ranges.items()):
-                col = cols[idx % 3]
-                with col:
-                    min_val = range_info['min']
-                    max_val = range_info['max']
-                    
-                    # Handle case where min_val == max_val (only one value)
-                    if min_val == max_val:
-                        # Fixed value - no slider needed, just display and use fixed range
-                        st.write(f"**{bed_type}の病床数:** {min_val}床")
-                        bed_count_filters[bed_type] = (min_val, max_val)
-                    else:
-                        # Use slider for bed count range
-                        bed_count_range = st.slider(
-                            f"{bed_type}の病床数",
-                            min_value=min_val,
-                            max_value=max_val,
-                            value=(min_val, max_val),
-                            key=f'bed_count_filter_{bed_type}',
-                            help=f"範囲: {min_val}〜{max_val}床"
-                        )
-                        bed_count_filters[bed_type] = bed_count_range
+        
+        # Filter section header with expander
+        with st.expander("### フィルター条件", expanded=False):
+            st.caption("類似医療機関の検索結果を絞り込みます")
+            
+            # Bed type filter (multiselect) - default to target institution's bed types only
+            if all_bed_types:
+                # Default to only the target institution's bed types
+                default_selection = [bt for bt in target_bed_types if bt in all_bed_types]
+                selected_bed_types = st.multiselect(
+                    "病床種類でフィルター:",
+                    options=all_bed_types,
+                    default=default_selection,
+                    key='bed_type_filter',
+                    help="選択した病床種類を持つ医療機関のみを表示します"
+                )
+                
+                # Filter by selected bed types
+                if selected_bed_types:
+                    # Filter institutions that have at least one of the selected bed types
+                    mask = similar_df['病床種類'].apply(
+                        lambda x: bool(set(x).intersection(set(selected_bed_types)))
+                    )
+                    filtered_df = similar_df[mask].copy()
+                else:
+                    # If no selection, show all
+                    filtered_df = similar_df.copy()
+            else:
+                # No bed types available, show all
+                filtered_df = similar_df.copy()
+            
+            # Bed count filter by bed type
+            if selected_bed_types:
+                st.write("")
+                st.caption("選択した病床種類の病床数範囲でフィルターします")
+        
+            # Get max bed counts for each selected bed type from filtered_df
+            bed_count_max = {}
+            if selected_bed_types and len(filtered_df) > 0:
+                # Get unique institutions with their bed counts (using 医療機関名称 since 医療機関番号 is not in similar_df)
+                unique_institutions = filtered_df[['医療機関名称', '病床数']].drop_duplicates(subset='医療機関名称', keep='first')
+                
+                # Collect all bed counts for all selected bed types in a single pass
+                bed_counts_by_type = {bed_type: [] for bed_type in selected_bed_types}
+                
+                # Single loop through unique institutions (direct Series iteration is faster than iterrows)
+                bed_count_series = unique_institutions['病床数']
+                for bed_count_dict in bed_count_series:
+                    if isinstance(bed_count_dict, dict):
+                        for bed_type in selected_bed_types:
+                            if bed_type in bed_count_dict:
+                                bed_num = bed_count_dict[bed_type]
+                                if isinstance(bed_num, (int, float)) and bed_num is not None:
+                                    bed_counts_by_type[bed_type].append(bed_num)
+                
+                # Calculate max for each bed type
+                for bed_type, bed_counts in bed_counts_by_type.items():
+                    if bed_counts:
+                        bed_count_max[bed_type] = int(max(bed_counts))
+            
+            # Create bed count filters for each selected bed type (vertical layout)
+            if bed_count_max:
+                for bed_type, max_val in bed_count_max.items():
+                    # Use slider for bed count range (min is always 1)
+                    bed_count_range = st.slider(
+                        f"{bed_type}の病床数",
+                        min_value=1,
+                        max_value=max_val,
+                        value=(1, max_val),
+                        key=f'bed_count_filter_{bed_type}',
+                        help=f"範囲: 1〜{max_val}床"
+                    )
+                    bed_count_filters[bed_type] = bed_count_range
         
         # Apply bed count filters
         if bed_count_filters:
