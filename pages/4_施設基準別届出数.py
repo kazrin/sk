@@ -1,14 +1,9 @@
 import streamlit as st
 import pandas as pd
 from utils import load_raw_data
+from dataframes import ShisetsuKijunFilingStatusDataFrame
 
 st.title("📋 施設基準別届出数")
-
-# Navigation button
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("← ホームページに戻る"):
-        st.switch_page("main.py")
 
 # Load raw data
 df = load_raw_data()
@@ -78,38 +73,15 @@ if criteria_input:
 filtered_df = df.filter_by_bed_types(selected_bed_types)
 filtered_df = filtered_df.filter_by_bed_counts(bed_count_filters)
 
-# Get total number of institutions in filtered data (by institution number)
-total_institutions = filtered_df['医療機関番号'].nunique()
+# Create filing status DataFrame
+filing_status = ShisetsuKijunFilingStatusDataFrame.from_shisetsu_kijun(filtered_df)
 
-# Calculate filing status counts and institution counts
-# Group by both 受理届出名称 and 受理記号 (1-to-1 relationship)
-filing_status = (
-    filtered_df.groupby(['受理届出名称', '受理記号'])
-    .agg({
-        '医療機関番号': 'nunique',  # Number of unique institutions
-        '受理届出名称': 'count'     # Total count of filings
-    })
-    .rename(columns={
-        '医療機関番号': '届出医療機関数',
-        '受理届出名称': '件数'
-    })
-    .reset_index()
-)
+# Get total number of institutions
+total_institutions = filing_status.get_total_institutions(filtered_df)
 
-# Calculate percentage
-filing_status['届出医療機関割合'] = (
-    filing_status['届出医療機関数'] / total_institutions * 100
-).round(2)
-
-# Filter by facility criteria (exact match if criteria are provided)
-# Match against either 受理届出名称 or 受理記号
+# Filter by facility criteria
 if selected_facility_criteria:
-    # Filter filing statuses that exactly match the input criteria
-    name_mask = filing_status['受理届出名称'].isin(selected_facility_criteria)
-    symbol_mask = filing_status['受理記号'].isin(selected_facility_criteria)
-    mask = name_mask | symbol_mask
-    filing_status = filing_status[mask]
-
+    filing_status = filing_status.filter_by_facility_criteria(selected_facility_criteria)
 
 # Sort by count in descending order (default)
 filing_status = filing_status.sort_values('件数', ascending=False)
@@ -119,13 +91,8 @@ st.write(f"**対象医療機関数: {total_institutions:,} 件**")
 
 # Display in table format
 if len(filing_status) > 0:
-    # Format percentage column
-    display_df = filing_status.copy()
-    display_df['届出医療機関割合'] = display_df['届出医療機関割合'].apply(lambda x: f"{x:.2f}%")
-    
-    # Reorder columns
-    display_columns = ['受理届出名称', '受理記号', '件数', '届出医療機関数', '届出医療機関割合']
-    display_df = display_df[display_columns]
+    # Get display DataFrame with formatted percentage
+    display_df = filing_status.get_display_dataframe()
     
     st.dataframe(
         display_df,
