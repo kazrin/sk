@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import ast
 from utils import load_raw_data, display_institution_basic_info, format_bed_count
-from dataframes import ShisetsuKijunDataFrame, JaccardSimilarityDataFrame
+from dataframes import ShisetsuKijunDataFrame, JaccardSimilarityDataFrame, ShisetsuKijunFilingCrossTabDataFrame
 
 st.title("🔍 類似医療機関分析")
 
@@ -135,81 +135,12 @@ if selected_institution:
         # Create cross-tabulation table for top 20 similar institutions
         st.write("### 📊 申請施設基準の届出状況（類似度上位20件）")
         
-        # Get top 20 institutions
-        top_20_df = filtered_df.head(20).copy()
-        top_20_institutions = top_20_df['医療機関名称'].tolist()
-        
-        # Pre-compute institution filings by institution number (for performance)
-        institution_filings_by_number = (
-            df.groupby('医療機関番号')['受理届出名称']
-            .apply(lambda x: set(x.dropna().unique()))
-            .to_dict()
+        # Create cross-tabulation DataFrame
+        cross_tab_df = ShisetsuKijunFilingCrossTabDataFrame.from_jaccard_similarity(
+            filtered_df, df, selected_institution, top_n=20
         )
         
-        # Get institution numbers for these institutions
-        institution_number_mapping = (
-            df.groupby('医療機関名称')['医療機関番号']
-            .first()
-            .to_dict()
-        )
-        
-        # Create mapping from 受理届出名称 to 受理記号 (1-to-1 relationship)
-        if '受理記号' in df.columns:
-            filing_name_to_symbol = (
-                df.groupby('受理届出名称')['受理記号']
-                .first()
-                .to_dict()
-            )
-        else:
-            filing_name_to_symbol = {}
-        
-        # Get all filing types (施設基準) from target and top 20 institutions
-        all_filing_types = set()
-        
-        # Get target institution's filing types
-        target_institution_number = institution_data.iloc[0]['医療機関番号']
-        target_filing_types = institution_filings_by_number.get(target_institution_number, set())
-        all_filing_types.update(target_filing_types)
-        
-        # Get top 20 institutions' filing types
-        for institution_name in top_20_institutions:
-            institution_number = institution_number_mapping.get(institution_name)
-            if institution_number:
-                filing_types = institution_filings_by_number.get(institution_number, set())
-                all_filing_types.update(filing_types)
-        
-        all_filing_types = sorted(list(all_filing_types))
-        
-        if all_filing_types and top_20_institutions:
-            # Build data for cross-tabulation
-            rows_data = []
-            
-            for filing_type in all_filing_types:
-                row_data = {
-                    '受理届出名称': filing_type,
-                    '受理記号': filing_name_to_symbol.get(filing_type, '')
-                }
-                
-                # First, add target institution's filing status
-                target_filing_types_set = institution_filings_by_number.get(target_institution_number, set())
-                row_data[selected_institution] = filing_type in target_filing_types_set
-                
-                # Then, add top 20 institutions' filing status
-                for institution_name in top_20_institutions:
-                    institution_number = institution_number_mapping.get(institution_name)
-                    if institution_number:
-                        filing_types_set = institution_filings_by_number.get(institution_number, set())
-                        row_data[institution_name] = filing_type in filing_types_set
-                    else:
-                        row_data[institution_name] = False
-                
-                rows_data.append(row_data)
-            
-            # Create DataFrame with 受理届出名称 and 受理記号 as columns
-            cross_tab_df = pd.DataFrame(rows_data)
-            # Set 受理届出名称 as index for filtering, but we'll display it as a column
-            cross_tab_df = cross_tab_df.set_index('受理届出名称')
-            
+        if len(cross_tab_df) > 0:
             # Filter: Show only filing types that target institution has NOT filed
             show_only_unfiled = st.checkbox(
                 "対象医療機関が未届の施設基準のみ表示",
@@ -218,18 +149,12 @@ if selected_institution:
             )
             
             if show_only_unfiled:
-                # Filter rows where target institution column is False
-                filtered_cross_tab_df = cross_tab_df[cross_tab_df[selected_institution] == False].copy()
+                filtered_cross_tab_df = cross_tab_df.filter_unfiled_by_target(selected_institution)
             else:
-                filtered_cross_tab_df = cross_tab_df.copy()
+                filtered_cross_tab_df = cross_tab_df
             
-            # Reset index to display 受理届出名称 as a regular column
-            display_df = filtered_cross_tab_df.reset_index()
-            
-            # Reorder columns: 受理届出名称, 受理記号, then institution columns
-            institution_columns = [selected_institution] + top_20_institutions
-            display_columns = ['受理届出名称', '受理記号'] + institution_columns
-            display_df = display_df[display_columns]
+            # Get display DataFrame with proper column order
+            display_df = filtered_cross_tab_df.get_display_dataframe(selected_institution)
             
             # Display the table
             st.dataframe(
