@@ -17,8 +17,45 @@ def load_stats_data():
     institutions = df.aggregate_by_institution_name()
     return institutions.sort_values('医療機関名称')
 
-def display_institutions_table(df, available_columns):
-    """Display institutions dataframe and create selection buttons"""
+def limit_and_display_results(df, max_results, label_prefix="結果", sort_column=None, ascending=False):
+    """Limit results to max_results and display with count message
+    
+    Args:
+        df: DataFrame to limit and display
+        max_results: Maximum number of results to display
+        label_prefix: Prefix for the count message (default: "結果")
+        sort_column: Column name to sort by before limiting (optional)
+        ascending: Sort order (default: False, descending)
+        
+    Returns:
+        Limited DataFrame ready for display
+    """
+    total_count = len(df)
+    
+    # Sort if sort_column is provided
+    if sort_column and sort_column in df.columns:
+        df = df.sort_values(sort_column, ascending=ascending)
+    
+    # Limit results
+    limited_df = df.head(max_results)
+    
+    # Display count message
+    if total_count > max_results:
+        st.write(f"{label_prefix}: {total_count:,} 件 (表示件数: 上位{max_results}件に絞りました)")
+    else:
+        st.write(f"{label_prefix}: {total_count:,} 件")
+    
+    return limited_df
+
+def display_institutions_table(df, display_columns):
+    """Display institutions dataframe and create selection buttons
+    
+    Args:
+        df: DataFrame to display
+        display_columns: List of column names to display (only existing columns will be used)
+    """
+    # Select columns that exist in the dataframe
+    available_columns = [col for col in display_columns if col in df.columns]
     # Create display dataframe with available columns
     display_df = df[available_columns].copy()
     
@@ -58,32 +95,26 @@ if search_term:
     filtered_institutions = institutions.filter_by_institution_name(search_term)
     
     if len(filtered_institutions) > 0:
-        total_count = len(filtered_institutions)
-        # Limit to top MAX_DISPLAY_RESULTS results
-        filtered_institutions = filtered_institutions.head(MAX_DISPLAY_RESULTS)
-        if total_count > MAX_DISPLAY_RESULTS:
-            st.write(f"検索結果: {total_count:,} 件 (表示件数: 上位{MAX_DISPLAY_RESULTS}件に絞りました)")
-        else:
-            st.write(f"検索結果: {total_count:,} 件")
+        # Limit and display results
+        filtered_institutions = limit_and_display_results(
+            filtered_institutions, 
+            MAX_DISPLAY_RESULTS, 
+            label_prefix="検索結果"
+        )
         
-        # Select columns that exist in the dataframe
-        available_columns = [col for col in DISPLAY_COLUMNS if col in filtered_institutions.columns]
-        
-        # Display institutions table with selection buttons
-        display_institutions_table(filtered_institutions, available_columns)
+        # Display table
+        display_institutions_table(filtered_institutions, DISPLAY_COLUMNS)
     else:
         st.warning("該当する医療機関が見つかりませんでした。")
 else:
     # Display all institutions when no search term (limited to top MAX_DISPLAY_RESULTS)
-    total_count = len(institutions)
-    institutions_display = institutions.sort_values('届出数', ascending=False).head(MAX_DISPLAY_RESULTS)
-    if total_count > MAX_DISPLAY_RESULTS:
-        st.write(f"医療機関一覧 (総数: {total_count:,}件、表示件数: 上位{MAX_DISPLAY_RESULTS}件に絞りました):")
-    else:
-        st.write(f"医療機関一覧 ({total_count:,}件):")
+    institutions_display = limit_and_display_results(
+        institutions,
+        MAX_DISPLAY_RESULTS,
+        label_prefix="医療機関一覧",
+        sort_column='届出数',
+        ascending=False
+    )
     
-    # Select columns that exist in the dataframe
-    available_columns = [col for col in DISPLAY_COLUMNS if col in institutions_display.columns]
-    
-    # Display institutions table with selection buttons
-    display_institutions_table(institutions_display, available_columns)
+    # Display table
+    display_institutions_table(institutions_display, DISPLAY_COLUMNS)
