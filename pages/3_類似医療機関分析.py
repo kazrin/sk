@@ -2,122 +2,18 @@ import streamlit as st
 import pandas as pd
 import ast
 from utils import load_raw_data, display_institution_basic_info
+from dataframes import ShisetsuKijunDataFrame, JaccardSimilarityDataFrame
 
 st.title("🔍 類似医療機関分析")
-
-def calculate_jaccard_similarity(set1, set2):
-    """Calculate Jaccard similarity coefficient between two sets"""
-    if len(set1) == 0 and len(set2) == 0:
-        return 1.0
-    intersection = len(set1.intersection(set2))
-    union = len(set1.union(set2))
-    return intersection / union if union > 0 else 0.0
 
 @st.cache_data(hash_funcs={dict: lambda x: str(x), list: lambda x: str(x)})
 def find_similar_institutions(target_institution, _df):
     """Find similar institutions based on filing contents"""
-    # Get target institution's number first
-    target_institution_data = _df[_df['医療機関名称'] == target_institution]
-    if len(target_institution_data) == 0:
-        return pd.DataFrame()
+    # Convert to ShisetsuKijunDataFrame if not already
+    if not isinstance(_df, ShisetsuKijunDataFrame):
+        _df = ShisetsuKijunDataFrame(_df)
     
-    target_institution_number = target_institution_data.iloc[0]['医療機関番号']
-    
-    # Pre-group all institutions' filings by institution number (more accurate than name)
-    institution_filings_dict = (
-        _df.groupby('医療機関番号')['受理届出名称']
-        .apply(lambda x: set(x.dropna().unique()))
-        .to_dict()
-    )
-    
-    # Get institution name mapping (number -> name)
-    institution_name_mapping = (
-        _df.groupby('医療機関番号')['医療機関名称']
-        .first()
-        .to_dict()
-    )
-    
-    # Get bed counts for each institution using drop_duplicates
-    # This is more efficient than looping
-    unique_institutions = _df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
-    
-    # Convert to dict, handling string to dict conversion
-    institution_bed_counts = {}
-    for _, row in unique_institutions.iterrows():
-        inst_num = row['医療機関番号']
-        bed_count = row['病床数']
-        
-        # If it's a string (JSON-like), convert to dict
-        if isinstance(bed_count, str):
-            try:
-                institution_bed_counts[inst_num] = ast.literal_eval(bed_count)
-            except:
-                institution_bed_counts[inst_num] = {}
-        # If already a dict, use as is
-        elif isinstance(bed_count, dict):
-            institution_bed_counts[inst_num] = bed_count
-        else:
-            institution_bed_counts[inst_num] = {}
-    
-    # Get target institution's filings
-    target_filings = institution_filings_dict.get(target_institution_number, set())
-    
-    if len(target_filings) == 0:
-        return pd.DataFrame()
-    
-    # Calculate similarities for all other institutions
-    similarities = []
-    for institution_number, filings in institution_filings_dict.items():
-        if institution_number == target_institution_number or len(filings) == 0:
-            continue
-        
-        similarity = calculate_jaccard_similarity(target_filings, filings)
-        overlap = target_filings.intersection(filings)
-        unique_to_target = target_filings - filings
-        unique_to_institution = filings - target_filings
-        
-        # Get bed count from our mapping (should already be a dict)
-        bed_count = institution_bed_counts.get(institution_number, {})
-        
-        # Ensure it's a dict and make a copy
-        if not isinstance(bed_count, dict):
-            bed_count = {}
-        else:
-            bed_count = dict(bed_count)
-        
-        # Extract bed types from bed count dict (keys are bed types)
-        bed_types = []
-        if bed_count:
-            bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
-            bed_types = sorted([bt for bt in bed_types if bt])  # Remove empty strings and sort
-        
-        # Get institution name
-        institution_name = institution_name_mapping.get(institution_number, f"医療機関番号: {institution_number}")
-        
-        similarities.append({
-            '医療機関名称': institution_name,
-            '病床種類': bed_types,
-            '病床数': bed_count,
-            '類似度': similarity,
-            '重複届出数': len(overlap),
-            '対象機関のみの届出数': len(unique_to_target),
-            '類似機関のみの届出数': len(unique_to_institution),
-        })
-    
-    # Convert to DataFrame and sort by similarity
-    if not similarities:
-        return pd.DataFrame()
-    
-    result_df = pd.DataFrame(similarities)
-    
-    # Ensure病床数 column is treated as object type to preserve dicts
-    if '病床数' in result_df.columns:
-        result_df['病床数'] = result_df['病床数'].astype(object)
-    
-    if len(result_df) > 0:
-        result_df = result_df.sort_values('類似度', ascending=False)
-    
-    return result_df
+    return JaccardSimilarityDataFrame.from_shisetsu_kijun(_df, target_institution)
 
 # Get selected institution from session state
 selected_institution = st.session_state.get('selected_institution', None)
@@ -129,7 +25,7 @@ if selected_institution:
     df = load_raw_data()
     
     # Filter data for selected institution
-    institution_data = df[df['医療機関名称'] == selected_institution]
+    institution_data = df.filter_by_exact_institution_name(selected_institution)
     
     # Display basic information
     row_data = institution_data.iloc[0]
@@ -156,13 +52,9 @@ if selected_institution:
             target_bed_types = [str(k).strip() for k in target_bed_count.keys() if k is not None and str(k).strip()]
         
         # Get all available bed types from similar institutions
-        all_bed_types = set()
-        for bed_types_list in similar_df['病床種類']:
-            if isinstance(bed_types_list, list):
-                # Filter out None values and empty strings, and strip whitespace
-                cleaned_types = [str(bt).strip() for bt in bed_types_list if bt is not None and str(bt).strip()]
-                all_bed_types.update(cleaned_types)
-        all_bed_types = sorted([bt for bt in all_bed_types if bt])  # Remove empty strings
+        from dataframes import JaccardSimilarityDataFrame
+        # similar_df is already JaccardSimilarityDataFrame from calculate_jaccard_similarity
+        all_bed_types = similar_df.get_all_bed_types()
         
         # Initialize selected_bed_types
         selected_bed_types = []
@@ -186,11 +78,7 @@ if selected_institution:
                 
                 # Filter by selected bed types
                 if selected_bed_types:
-                    # Filter institutions that have at least one of the selected bed types
-                    mask = similar_df['病床種類'].apply(
-                        lambda x: bool(set(x).intersection(set(selected_bed_types)))
-                    )
-                    filtered_df = similar_df[mask].copy()
+                    filtered_df = similar_df.filter_by_bed_types(selected_bed_types)
                 else:
                     # If no selection, show all
                     filtered_df = similar_df.copy()
@@ -205,13 +93,8 @@ if selected_institution:
         
             # Get max bed counts for each selected bed type from filtered_df
             if selected_bed_types and len(filtered_df) > 0:
-                # Convert to ShisetsuKijunDataFrame if not already
-                from dataframes import ShisetsuKijunDataFrame
-                if not isinstance(filtered_df, ShisetsuKijunDataFrame):
-                    filtered_df = ShisetsuKijunDataFrame(filtered_df)
-                
-                # Get max bed counts (using 医療機関名称 since 医療機関番号 is not in similar_df)
-                bed_count_max = filtered_df.get_bed_count_max(selected_bed_types, unique_by='医療機関名称')
+                # Get max bed counts (JaccardSimilarityDataFrame has this method)
+                bed_count_max = filtered_df.get_bed_count_max(selected_bed_types)
                 
                 # Create bed count filters for each selected bed type (vertical layout)
                 if bed_count_max:
@@ -229,12 +112,8 @@ if selected_institution:
         
         # Apply bed count filters
         if bed_count_filters and len(filtered_df) > 0:
-            # Convert to ShisetsuKijunDataFrame if not already
-            from dataframes import ShisetsuKijunDataFrame
-            if not isinstance(filtered_df, ShisetsuKijunDataFrame):
-                filtered_df = ShisetsuKijunDataFrame(filtered_df)
-            
-            filtered_df = filtered_df.filter_by_bed_counts_generic(bed_count_filters, unique_by='医療機関名称')
+            # JaccardSimilarityDataFrame has this method
+            filtered_df = filtered_df.filter_by_bed_counts_generic(bed_count_filters)
         
         st.write(f"**表示件数: {len(filtered_df)}件 (全{len(similar_df)}件中)**")
         
