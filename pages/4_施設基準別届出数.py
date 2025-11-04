@@ -20,12 +20,7 @@ with st.expander("### 集計条件", expanded=False):
     
     # Bed type filter (always enabled, default to all)
     # Get all available bed types
-    all_bed_types = set()
-    for bed_count in df['病床数']:
-        if isinstance(bed_count, dict):
-            bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
-            all_bed_types.update(bed_types)
-    all_bed_types = sorted([bt for bt in all_bed_types if bt])
+    all_bed_types = df.get_all_bed_types()
     
     if all_bed_types:
         selected_bed_types = st.multiselect(
@@ -45,28 +40,8 @@ with st.expander("### 集計条件", expanded=False):
         st.write("")
         st.caption("選択した病床種類の病床数範囲でフィルターします")
         
-        # Get max bed counts for each selected bed type from df
-        bed_count_max = {}
-        # Get unique institutions with their bed counts (more efficient)
-        unique_institutions = df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
-        
-        # Collect all bed counts for all selected bed types in a single pass
-        bed_counts_by_type = {bed_type: [] for bed_type in selected_bed_types}
-        
-        # Single loop through unique institutions (direct Series iteration is faster than iterrows)
-        bed_count_series = unique_institutions['病床数']
-        for bed_count_dict in bed_count_series:
-            if isinstance(bed_count_dict, dict):
-                for bed_type in selected_bed_types:
-                    if bed_type in bed_count_dict:
-                        bed_num = bed_count_dict[bed_type]
-                        if isinstance(bed_num, (int, float)) and bed_num is not None:
-                            bed_counts_by_type[bed_type].append(bed_num)
-        
-        # Calculate max for each bed type
-        for bed_type, bed_counts in bed_counts_by_type.items():
-            if bed_counts:
-                bed_count_max[bed_type] = int(max(bed_counts))
+        # Get max bed counts for each selected bed type
+        bed_count_max = df.get_bed_count_max(selected_bed_types)
         
         # Create bed count filters for each selected bed type (vertical layout)
         if bed_count_max:
@@ -99,71 +74,9 @@ selected_facility_criteria = []
 if criteria_input:
     selected_facility_criteria = [line.strip() for line in criteria_input.split('\n') if line.strip()]
 
-# Filter data by bed type
-filtered_df = df.copy()
-if selected_bed_types:
-    # Get institutions (by institution number) that have selected bed types
-    def aggregate_bed_types(group):
-        """Aggregate all bed types from all records of an institution"""
-        all_bed_types = set()
-        for bed_count in group:
-            if isinstance(bed_count, dict):
-                bed_types = [str(k).strip() for k in bed_count.keys() if k is not None and str(k).strip()]
-                all_bed_types.update(bed_types)
-        return all_bed_types
-    
-    institution_bed_types = (
-        df.groupby('医療機関番号')['病床数']
-        .apply(aggregate_bed_types)
-        .to_dict()
-    )
-    
-    # Filter institutions that have at least one of the selected bed types
-    filtered_institution_numbers = {
-        inst_num for inst_num, bed_types in institution_bed_types.items()
-        if set(selected_bed_types).intersection(bed_types)
-    }
-    
-    # Filter data to only include filtered institutions
-    mask = filtered_df['医療機関番号'].isin(filtered_institution_numbers)
-    filtered_df = filtered_df[mask]
-
-# Apply bed count filters
-if bed_count_filters:
-    # Get unique institutions with their bed counts
-    unique_institutions = filtered_df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
-    
-    def passes_bed_count_filter(row):
-        """Check if institution passes bed count filters"""
-        bed_count_dict = row['病床数']
-        if not isinstance(bed_count_dict, dict):
-            return True  # Include records without bed count data
-        
-        # Check if ALL selected bed type filters are satisfied (AND condition)
-        for bed_type, (min_val, max_val) in bed_count_filters.items():
-            # If this bed type exists in the institution's bed count
-            if bed_type in bed_count_dict:
-                bed_num = bed_count_dict[bed_type]
-                if isinstance(bed_num, (int, float)) and bed_num is not None:
-                    # Check if it's within the range
-                    if not (min_val <= bed_num <= max_val):
-                        return False  # Failed this filter condition
-                else:
-                    return False  # Invalid bed number
-            else:
-                # If bed type is not in the institution, include it (True)
-                continue  # Skip this filter condition and check others
-        
-        # All conditions passed
-        return True
-    
-    # Filter institutions by bed count
-    mask = unique_institutions.apply(passes_bed_count_filter, axis=1)
-    filtered_institution_numbers_by_bed_count = unique_institutions[mask]['医療機関番号'].unique()
-    
-    # Apply the filter to filtered_df
-    mask = filtered_df['医療機関番号'].isin(filtered_institution_numbers_by_bed_count)
-    filtered_df = filtered_df[mask]
+# Filter data by bed type and bed counts
+filtered_df = df.filter_by_bed_types(selected_bed_types)
+filtered_df = filtered_df.filter_by_bed_counts(bed_count_filters)
 
 # Get total number of institutions in filtered data (by institution number)
 total_institutions = filtered_df['医療機関番号'].nunique()

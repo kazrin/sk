@@ -14,10 +14,10 @@ def calculate_jaccard_similarity(set1, set2):
     return intersection / union if union > 0 else 0.0
 
 @st.cache_data(hash_funcs={dict: lambda x: str(x), list: lambda x: str(x)})
-def find_similar_institutions(target_institution, df):
+def find_similar_institutions(target_institution, _df):
     """Find similar institutions based on filing contents"""
     # Get target institution's number first
-    target_institution_data = df[df['医療機関名称'] == target_institution]
+    target_institution_data = _df[_df['医療機関名称'] == target_institution]
     if len(target_institution_data) == 0:
         return pd.DataFrame()
     
@@ -25,21 +25,21 @@ def find_similar_institutions(target_institution, df):
     
     # Pre-group all institutions' filings by institution number (more accurate than name)
     institution_filings_dict = (
-        df.groupby('医療機関番号')['受理届出名称']
+        _df.groupby('医療機関番号')['受理届出名称']
         .apply(lambda x: set(x.dropna().unique()))
         .to_dict()
     )
     
     # Get institution name mapping (number -> name)
     institution_name_mapping = (
-        df.groupby('医療機関番号')['医療機関名称']
+        _df.groupby('医療機関番号')['医療機関名称']
         .first()
         .to_dict()
     )
     
     # Get bed counts for each institution using drop_duplicates
     # This is more efficient than looping
-    unique_institutions = df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
+    unique_institutions = _df[['医療機関番号', '病床数']].drop_duplicates(subset='医療機関番号', keep='first')
     
     # Convert to dict, handling string to dict conversion
     institution_bed_counts = {}
@@ -204,72 +204,37 @@ if selected_institution:
                 st.caption("選択した病床種類の病床数範囲でフィルターします")
         
             # Get max bed counts for each selected bed type from filtered_df
-            bed_count_max = {}
             if selected_bed_types and len(filtered_df) > 0:
-                # Get unique institutions with their bed counts (using 医療機関名称 since 医療機関番号 is not in similar_df)
-                unique_institutions = filtered_df[['医療機関名称', '病床数']].drop_duplicates(subset='医療機関名称', keep='first')
+                # Convert to ShisetsuKijunDataFrame if not already
+                from utils import ShisetsuKijunDataFrame
+                if not isinstance(filtered_df, ShisetsuKijunDataFrame):
+                    filtered_df = ShisetsuKijunDataFrame(filtered_df)
                 
-                # Collect all bed counts for all selected bed types in a single pass
-                bed_counts_by_type = {bed_type: [] for bed_type in selected_bed_types}
+                # Get max bed counts (using 医療機関名称 since 医療機関番号 is not in similar_df)
+                bed_count_max = filtered_df.get_bed_count_max(selected_bed_types, unique_by='医療機関名称')
                 
-                # Single loop through unique institutions (direct Series iteration is faster than iterrows)
-                bed_count_series = unique_institutions['病床数']
-                for bed_count_dict in bed_count_series:
-                    if isinstance(bed_count_dict, dict):
-                        for bed_type in selected_bed_types:
-                            if bed_type in bed_count_dict:
-                                bed_num = bed_count_dict[bed_type]
-                                if isinstance(bed_num, (int, float)) and bed_num is not None:
-                                    bed_counts_by_type[bed_type].append(bed_num)
-                
-                # Calculate max for each bed type
-                for bed_type, bed_counts in bed_counts_by_type.items():
-                    if bed_counts:
-                        bed_count_max[bed_type] = int(max(bed_counts))
-            
-            # Create bed count filters for each selected bed type (vertical layout)
-            if bed_count_max:
-                for bed_type, max_val in bed_count_max.items():
-                    # Use slider for bed count range (min is always 1)
-                    bed_count_range = st.slider(
-                        f"{bed_type}の病床数",
-                        min_value=1,
-                        max_value=max_val,
-                        value=(1, max_val),
-                        key=f'bed_count_filter_{bed_type}',
-                        help=f"範囲: 1〜{max_val}床"
-                    )
-                    bed_count_filters[bed_type] = bed_count_range
+                # Create bed count filters for each selected bed type (vertical layout)
+                if bed_count_max:
+                    for bed_type, max_val in bed_count_max.items():
+                        # Use slider for bed count range (min is always 1)
+                        bed_count_range = st.slider(
+                            f"{bed_type}の病床数",
+                            min_value=1,
+                            max_value=max_val,
+                            value=(1, max_val),
+                            key=f'bed_count_filter_{bed_type}',
+                            help=f"範囲: 1〜{max_val}床"
+                        )
+                        bed_count_filters[bed_type] = bed_count_range
         
         # Apply bed count filters
-        if bed_count_filters:
-            def passes_bed_count_filter(row):
-                """Check if institution passes bed count filters"""
-                bed_count_dict = row['病床数']
-                if not isinstance(bed_count_dict, dict):
-                    return True  # Include records without bed count data
-                
-                # Check if ALL selected bed type filters are satisfied (AND condition)
-                for bed_type, (min_val, max_val) in bed_count_filters.items():
-                    # If this bed type exists in the institution's bed count
-                    if bed_type in bed_count_dict:
-                        bed_num = bed_count_dict[bed_type]
-                        if isinstance(bed_num, (int, float)) and bed_num is not None:
-                            # Check if it's within the range
-                            if not (min_val <= bed_num <= max_val):
-                                return False  # Failed this filter condition
-                        else:
-                            return False  # Invalid bed number
-                    else:
-                        # If bed type is not in the institution, include it (True)
-                        continue  # Skip this filter condition and check others
-                
-                # All conditions passed
-                return True
+        if bed_count_filters and len(filtered_df) > 0:
+            # Convert to ShisetsuKijunDataFrame if not already
+            from utils import ShisetsuKijunDataFrame
+            if not isinstance(filtered_df, ShisetsuKijunDataFrame):
+                filtered_df = ShisetsuKijunDataFrame(filtered_df)
             
-            if len(filtered_df) > 0:
-                mask = filtered_df.apply(passes_bed_count_filter, axis=1)
-                filtered_df = filtered_df[mask].copy()
+            filtered_df = filtered_df.filter_by_bed_counts_generic(bed_count_filters, unique_by='医療機関名称')
         
         st.write(f"**表示件数: {len(filtered_df)}件 (全{len(similar_df)}件中)**")
         

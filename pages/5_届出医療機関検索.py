@@ -72,18 +72,18 @@ if filing_display_options:
         
         # Cached function to get search results
         @st.cache_data(hash_funcs={dict: lambda x: str(x)})
-        def search_institutions_by_filing(df, filing_name, filing_symbol=None):
+        def search_institutions_by_filing(_df, filing_name, filing_symbol=None):
             """Search institutions by filing name or symbol"""
             # Filter institutions that have the selected filing
             # Match against either 受理届出名称 or 受理記号
-            name_mask = df['受理届出名称'] == filing_name
+            name_mask = _df['受理届出名称'] == filing_name
             if filing_symbol:
-                symbol_mask = df['受理記号'] == filing_symbol
+                symbol_mask = _df['受理記号'] == filing_symbol
                 mask = name_mask | symbol_mask
             else:
                 mask = name_mask
             
-            matching_records = df[mask]
+            matching_records = _df[mask]
             
             if len(matching_records) == 0:
                 return pd.DataFrame()
@@ -94,7 +94,7 @@ if filing_display_options:
             # Aggregate institution data
             institution_data = []
             for inst_num in institution_numbers:
-                inst_records = df[df['医療機関番号'] == inst_num]
+                inst_records = _df[_df['医療機関番号'] == inst_num]
                 first_record = inst_records.iloc[0]
                 
                 institution_data.append({
