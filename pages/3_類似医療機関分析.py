@@ -6,7 +6,7 @@ from dataframes import ShisetsuKijunDataFrame, JaccardSimilarityDataFrame, Shise
 
 st.title("🔍 類似医療機関分析")
 
-@st.cache_data(hash_funcs={dict: lambda x: str(x), list: lambda x: str(x)})
+@st.cache_resource
 def find_similar_institutions(target_institution, _df):
     """Find similar institutions based on filing contents"""
     # Convert to ShisetsuKijunDataFrame if not already

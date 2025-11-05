@@ -6,7 +6,7 @@ from dataframes import ShisetsuKijunDataFrame
 feather_file_path = "data/2025/10/all.feather"
 
 
-@st.cache_data(hash_funcs={dict: lambda x: str(x)})
+@st.cache_resource
 def load_raw_data():
     """Load raw data from feather file"""
     return ShisetsuKijunDataFrame.from_feather(feather_file_path)
