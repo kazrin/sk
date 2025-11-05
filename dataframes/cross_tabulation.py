@@ -10,7 +10,7 @@ class ShisetsuKijunFilingCrossTabDataFrame(pd.DataFrame):
         return ShisetsuKijunFilingCrossTabDataFrame
     
     @classmethod
-    def from_jaccard_similarity(cls, jaccard_df, source_df, target_institution_name, top_n=20):
+    def from_jaccard_similarity(cls, jaccard_df, source_df, target_institution_name, top_n=20, target_institution_number=None):
         """Create ShisetsuKijunFilingCrossTabDataFrame from JaccardSimilarityDataFrame
         
         Args:
@@ -18,6 +18,7 @@ class ShisetsuKijunFilingCrossTabDataFrame(pd.DataFrame):
             source_df: ShisetsuKijunDataFrame with original data
             target_institution_name: Name of the target institution
             top_n: Number of top similar institutions to include (default: 20)
+            target_institution_number: Optional target institution number (for performance optimization)
             
         Returns:
             ShisetsuKijunFilingCrossTabDataFrame with filing status comparison
@@ -57,12 +58,12 @@ class ShisetsuKijunFilingCrossTabDataFrame(pd.DataFrame):
         else:
             filing_name_to_symbol = {}
         
-        # Get target institution's number
-        target_institution_data = source_df.filter_by_exact_institution_name(target_institution_name)
-        if len(target_institution_data) == 0:
-            return cls()
-        
-        target_institution_number = target_institution_data.iloc[0]['医療機関番号']
+        # Get target institution's number (use provided value if available to avoid redundant filtering)
+        if target_institution_number is None:
+            target_institution_data = source_df.filter_by_exact_institution_name(target_institution_name)
+            if len(target_institution_data) == 0:
+                return cls()
+            target_institution_number = target_institution_data.iloc[0]['医療機関番号']
         
         # Get all filing types (施設基準) from target and top N institutions
         all_filing_types = set()

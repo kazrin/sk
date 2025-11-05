@@ -15,6 +15,19 @@ def find_similar_institutions(target_institution, _df):
     
     return JaccardSimilarityDataFrame.from_shisetsu_kijun(_df, target_institution)
 
+
+@st.cache_resource
+def create_cross_tabulation_cached(_top_20_institution_names_tuple, _target_institution_name, _target_institution_number, _top_20_df, _source_df):
+    """Create cross-tabulation DataFrame with caching based on institution names
+    
+    Note: This function uses st.cache_resource because it returns custom DataFrame classes
+    that cannot be pickled. The cache key is based on institution names tuple.
+    """
+    return ShisetsuKijunFilingCrossTabDataFrame.from_jaccard_similarity(
+        _top_20_df, _source_df, _target_institution_name, top_n=20, 
+        target_institution_number=_target_institution_number
+    )
+
 # Get selected institution from session state
 selected_institution = st.session_state.get('selected_institution', None)
 
@@ -135,10 +148,20 @@ if selected_institution:
         # Create cross-tabulation table for top 20 similar institutions
         st.write("### 📊 申請施設基準の届出状況（類似度上位20件）")
         
-        # Create cross-tabulation DataFrame
-        cross_tab_df = ShisetsuKijunFilingCrossTabDataFrame.from_jaccard_similarity(
-            filtered_df, df, selected_institution, top_n=20
-        )
+        # Get target institution number for optimization (already computed earlier)
+        target_institution_number = row_data['医療機関番号']
+        
+        # Get top 20 institutions for cross-tabulation
+        top_20_filtered_df = filtered_df.head(20)
+        top_20_institution_names = tuple(top_20_filtered_df['医療機関名称'].tolist())
+        
+        # Create cross-tabulation DataFrame with caching
+        # Cache key is based on institution names tuple (hashable) and target institution info
+        with st.spinner("申請施設基準の届出状況を計算中..."):
+            cross_tab_df = create_cross_tabulation_cached(
+                top_20_institution_names, selected_institution, target_institution_number, 
+                top_20_filtered_df, df
+            )
         
         if len(cross_tab_df) > 0:
             # Filter: Show only filing types that target institution has NOT filed
