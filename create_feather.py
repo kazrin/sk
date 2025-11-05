@@ -2,6 +2,85 @@ from argparse import ArgumentParser
 import pandas as pd
 import re
 from pathlib import Path
+from datetime import datetime
+
+
+def parse_japanese_era_date(date_str):
+    """Parse Japanese era date string to datetime object
+    
+    Supports formats like:
+    - "令和元年12月 1日" -> 2019-12-01
+    - "平成29年 9月 1日" -> 2017-09-01
+    - "昭和63年 1月 1日" -> 1988-01-01
+    
+    Args:
+        date_str: String containing Japanese era date
+        
+    Returns:
+        datetime object or None if parsing fails
+    """
+    if pd.isna(date_str) or not date_str:
+        return None
+    
+    date_str = str(date_str).strip()
+    if not date_str:
+        return None
+    
+    # Era to Western year base mapping
+    era_base = {
+        '令和': 2018,  # 令和元年 = 2019 = 2018 + 1
+        '平成': 1988,  # 平成元年 = 1989 = 1988 + 1
+        '昭和': 1925,  # 昭和元年 = 1926 = 1925 + 1
+        '大正': 1911,  # 大正元年 = 1912 = 1911 + 1
+        '明治': 1867,  # 明治元年 = 1868 = 1867 + 1
+    }
+    
+    # Pattern to match: 元号(元年|N年)M月 D日
+    # Examples: "令和元年12月 1日", "平成29年 9月 1日", "令和 6年 7月 1日"
+    # Match one of the era names explicitly
+    # Handle spaces after era name and between year/month/day
+    # Handle both half-width and full-width spaces (\s includes \u3000)
+    era_pattern = '|'.join(era_base.keys())
+    # Allow spaces after era name: 令和 6年 or 令和6年
+    pattern = rf'({era_pattern})[\s\u3000]*(?:元|(\d+))年[\s\u3000]*(\d+)[\s\u3000]*月[\s\u3000]*(\d+)[\s\u3000]*日'
+    match = re.match(pattern, date_str)
+    
+    if not match:
+        # Try alternative pattern without spaces (for cases like "令和6年7月1日")
+        pattern = rf'({era_pattern})(?:元|(\d+))年(\d+)月(\d+)日'
+        match = re.match(pattern, date_str)
+    
+    if not match:
+        return None
+    
+    era_name = match.group(1)
+    year_str = match.group(2)  # None if 元年
+    month_str = match.group(3)
+    day_str = match.group(4)
+    
+    # Get era base year (already validated by regex, but double-check)
+    if era_name not in era_base:
+        return None
+    
+    # Calculate Western year
+    if year_str is None:  # 元年
+        western_year = era_base[era_name] + 1
+    else:
+        western_year = era_base[era_name] + int(year_str)
+    
+    # Parse month and day
+    try:
+        month = int(month_str)
+        day = int(day_str)
+        
+        # Validate date
+        if month < 1 or month > 12 or day < 1 or day > 31:
+            return None
+        
+        # Create datetime object
+        return datetime(western_year, month, day)
+    except (ValueError, TypeError):
+        return None
 
 
 def create_feather_file(input_dir_path, output_file_path):
@@ -89,6 +168,18 @@ def create_feather_file(input_dir_path, output_file_path):
         
         # Overwrite 病床数 column with dict format
         df['病床数'] = bed_dicts
+    
+    # Parse 算定開始年月日 column and create date column
+    if '算定開始年月日' in df.columns:
+        df['算定開始年月日_date'] = df['算定開始年月日'].apply(parse_japanese_era_date)
+        
+        # Assert that all non-null 算定開始年月日 values are successfully parsed
+        problematic = df[df['算定開始年月日'].notna() & df['算定開始年月日_date'].isna()]
+        if len(problematic) > 0:
+            # Show some examples of problematic values
+            examples = problematic['算定開始年月日'].unique()[:10]
+            error_msg = f"Found {len(problematic)} rows where 算定開始年月日 has value but 算定開始年月日_date is null. Examples: {list(examples)}"
+            raise AssertionError(error_msg)
     
     # Aggregate data by 医療機関番号 and 受理番号 to make them primary keys
     # Create a function to aggregate remarks into a dict

@@ -6,7 +6,7 @@ st.title("🔍 届出医療機関検索")
 
 # Create display columns (matching 医科医療機関検索)
 DISPLAY_COLUMNS = ['医療機関名称', '医療機関番号', '都道府県名', '病床数', '届出数', 
-                   '医療機関所在地（郵便番号）', '医療機関所在地（住所）', 
+                   '算定開始年月日', '医療機関所在地（郵便番号）', '医療機関所在地（住所）', 
                    '電話番号', 'FAX番号', '医療機関記号番号', '種別']
 
 # Navigation buttons
@@ -51,17 +51,8 @@ if filing_display_options:
     if selected_filing_name:
         st.write("### 検索結果")
         
-        # Cached function to get search results
-        @st.cache_data(hash_funcs={dict: lambda x: str(x)})
-        def search_institutions_by_filing(_df, filing_name, filing_symbol=None):
-            """Search institutions by filing name or symbol"""
-            from dataframes import ShisetsuKijunDataFrame
-            if not isinstance(_df, ShisetsuKijunDataFrame):
-                _df = ShisetsuKijunDataFrame(_df)
-            return _df.aggregate_by_filing(filing_name, filing_symbol)
-        
         with st.spinner("検索中..."):
-            institution_summary = search_institutions_by_filing(df, selected_filing_name, selected_filing_symbol)
+            institution_summary = df.search_institutions_by_filing(selected_filing_name, selected_filing_symbol)
         
         if len(institution_summary) > 0:
             st.write(f"**該当医療機関数: {len(institution_summary):,} 件**")
@@ -69,6 +60,13 @@ if filing_display_options:
             # Format bed count for display
             display_df = institution_summary.copy()
             display_df['病床数'] = display_df['病床数'].apply(format_bed_count)
+            
+            # Format date column for display and rename
+            if '算定開始年月日_date' in display_df.columns:
+                display_df['算定開始年月日'] = display_df['算定開始年月日_date'].apply(
+                    lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) else None
+                )
+                display_df = display_df.drop(columns=['算定開始年月日_date'])
             
             # Select display columns (matching 医科医療機関検索 column order)
             available_columns = [col for col in DISPLAY_COLUMNS if col in display_df.columns]

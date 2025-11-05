@@ -313,55 +313,24 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
         mask = self['医療機関名称'] == institution_name
         return self[mask].copy()
     
-    def aggregate_by_filing(self, filing_name, filing_symbol=None):
-        """Aggregate data by institution name, filtered by specific filing criteria
+    def search_institutions_by_filing(self, filing_name, filing_symbol=None):
+        """Search institutions by filing name or symbol
         
         Args:
             filing_name: Facility criteria name (受理届出名称)
             filing_symbol: Optional facility criteria symbol (受理記号)
             
         Returns:
-            ShisetsuKijunDataFrame with one row per institution that has the specified filing
+            ShisetsuKijunDataFrame filtered by filing name or symbol
         """
-        # Filter institutions that have the selected filing
-        # Match against either 受理届出名称 or 受理記号
+        # Filter by filing name or symbol
         name_mask = self['受理届出名称'] == filing_name
         if filing_symbol:
             symbol_mask = self['受理記号'] == filing_symbol
             mask = name_mask | symbol_mask
         else:
             mask = name_mask
-        
-        filtered_df = self[mask]
-        
-        if len(filtered_df) == 0:
-            return self.__class__()
-        
-        # Get unique institutions (by institution number)
-        institution_numbers = filtered_df['医療機関番号'].unique()
-        
-        # Filter to only include these institutions
-        mask = self['医療機関番号'].isin(institution_numbers)
-        filtered_by_institution = self[mask]
-        
-        # Aggregate by institution name
-        institutions = filtered_by_institution.groupby('医療機関名称').agg({
-            '医療機関番号': 'first',
-            '併設医療機関番号': 'first',
-            '医療機関記号番号': 'first',
-            '都道府県名': 'first',
-            '医療機関所在地（郵便番号）': 'first',
-            '医療機関所在地（住所）': 'first',
-            '電話番号': 'first',
-            'FAX番号': 'first',
-            '病床数': 'first',
-            '種別': 'first',
-            '受理届出名称': 'count'
-        }).rename(columns={
-            '受理届出名称': '届出数'  # Rename filing count column
-        }).reset_index()
-        
-        return self.__class__(institutions)
+        return self.__class__(self[mask])
     
     def get_filing_options(self):
         """Get all available filing names and symbols for autocomplete

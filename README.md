@@ -17,6 +17,25 @@
 
 
 
+## データの準備
+
+### Featherファイルの作成
+
+ExcelファイルからFeatherファイルを生成するには、以下のコマンドを実行します：
+
+```bash
+uv run python create_feather.py --input-dir-path data/2025/10 --output-file-path data/2025/10/all.feather
+```
+
+- `--input-dir-path`: Excelファイルが格納されているディレクトリパス（再帰的に検索されます）
+- `--output-file-path`: 出力するFeatherファイルのパス
+
+このスクリプトは以下の処理を行います：
+- 指定ディレクトリ内のすべてのExcelファイルを読み込み
+- 病床数カラムを辞書形式に変換
+- 算定開始年月日を日付型に変換（`算定開始年月日_date`カラムとして追加）
+- 医療機関番号と受理番号でグループ化して集約
+
 ## 機能
 
 - **医療機関検索**: 医療機関名で検索し、詳細情報を確認
