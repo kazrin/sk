@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils import load_raw_data, format_bed_count
+from dataframes import ShisetsuKijunDataFrame
 
 st.title("🔍 届出医療機関検索")
 
@@ -57,8 +58,87 @@ if filing_display_options:
         if len(institution_summary) > 0:
             st.write(f"**該当医療機関数: {len(institution_summary):,} 件**")
             
-            # Format bed count for display
-            display_df = institution_summary.copy()
+            # Filter section
+            st.divider()
+            st.write("### フィルター条件")
+            
+            # Ensure institution_summary is ShisetsuKijunDataFrame
+            if not isinstance(institution_summary, ShisetsuKijunDataFrame):
+                institution_summary = ShisetsuKijunDataFrame(institution_summary)
+            
+            # Get all available bed types from filtered results
+            all_bed_types = institution_summary.get_all_bed_types()
+            
+            selected_bed_types = []
+            bed_count_filters = {}
+            
+            with st.expander("### フィルター条件", expanded=False):
+                st.caption("検索結果を病床種別・病床数で絞り込みます")
+                
+                if all_bed_types:
+                    selected_bed_types = st.multiselect(
+                        "病床種類でフィルター:",
+                        options=all_bed_types,
+                        default=all_bed_types,  # Default to all bed types selected
+                        key='filing_search_bed_type_filter',
+                        help="選択した病床種類を持つ医療機関のみを表示します"
+                    )
+                else:
+                    st.warning("⚠️ 病床種別データが見つかりませんでした。")
+                    selected_bed_types = []
+                
+                # Bed count filter by bed type
+                if selected_bed_types:
+                    st.write("")
+                    st.caption("選択した病床種類の病床数範囲でフィルターします")
+                    
+                    # Get max bed counts for each selected bed type from filtered results
+                    bed_count_max = institution_summary.get_bed_count_max(selected_bed_types)
+                    
+                    # Create bed count filters for each selected bed type (vertical layout)
+                    if bed_count_max:
+                        for bed_type, max_val in bed_count_max.items():
+                            # Use slider for bed count range (min is always 1)
+                            bed_count_range = st.slider(
+                                f"{bed_type}の病床数",
+                                min_value=1,
+                                max_value=max_val,
+                                value=(1, max_val),
+                                key=f'filing_search_bed_count_filter_{bed_type}',
+                                help=f"範囲: 1〜{max_val}床"
+                            )
+                            bed_count_filters[bed_type] = bed_count_range
+            
+            # Apply filters (outside expander)
+            filtered_institution_summary = institution_summary.copy()
+            if selected_bed_types:
+                filtered_institution_summary = filtered_institution_summary.filter_by_bed_types(selected_bed_types)
+            if bed_count_filters:
+                filtered_institution_summary = filtered_institution_summary.filter_by_bed_counts(bed_count_filters)
+            
+            st.write(f"**表示件数: {len(filtered_institution_summary):,} 件 (全{len(institution_summary):,} 件中)**")
+            
+            # Create trend chart for 算定開始年月日 (using filtered data)
+            if '算定開始年月日_date' in filtered_institution_summary.columns:
+                # Filter out null dates and create month column
+                date_df = filtered_institution_summary[filtered_institution_summary['算定開始年月日_date'].notna()].copy()
+                if len(date_df) > 0:
+                    # Extract year-month from date
+                    date_df['month'] = date_df['算定開始年月日_date'].dt.to_period('M').astype(str)
+                    # Count by month
+                    monthly_counts = date_df.groupby('month').size().reset_index(name='count')
+                    monthly_counts = monthly_counts.sort_values('month')
+                    
+                    # Display trend chart
+                    st.write("### 📈 算定開始年月日のトレンド")
+                    st.line_chart(
+                        monthly_counts.set_index('month'),
+                        y='count'
+                    )
+                    st.divider()
+            
+            # Format bed count for display (using filtered data)
+            display_df = filtered_institution_summary.copy()
             display_df['病床数'] = display_df['病床数'].apply(format_bed_count)
             
             # Format date column for display and rename
