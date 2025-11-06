@@ -35,11 +35,9 @@ class ShisetsuKijunFilingStatusDataFrame(pd.DataFrame):
             df.groupby(['受理届出名称', '受理記号'])
             .agg({
                 '医療機関番号': 'nunique',  # Number of unique institutions
-                '受理届出名称': 'count'     # Total count of filings
             })
             .rename(columns={
                 '医療機関番号': '届出医療機関数',
-                '受理届出名称': '件数'
             })
             .reset_index()
         )
@@ -81,7 +79,7 @@ class ShisetsuKijunFilingStatusDataFrame(pd.DataFrame):
         display_df['届出医療機関割合'] = display_df['届出医療機関割合'].apply(lambda x: f"{x:.2f}%")
         
         # Reorder columns
-        display_columns = ['受理届出名称', '受理記号', '件数', '届出医療機関数', '届出医療機関割合']
+        display_columns = ['受理届出名称', '受理記号', '届出医療機関数', '届出医療機関割合']
         display_df = display_df[display_columns]
         
         return display_df

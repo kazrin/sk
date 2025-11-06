@@ -84,7 +84,7 @@ if selected_facility_criteria:
     filing_status = filing_status.filter_by_facility_criteria(selected_facility_criteria)
 
 # Sort by count in descending order (default)
-filing_status = filing_status.sort_values('件数', ascending=False)
+filing_status = filing_status.sort_values('届出医療機関数', ascending=False)
 
 # Display summary
 st.write(f"**対象医療機関数: {total_institutions:,} 件**")
