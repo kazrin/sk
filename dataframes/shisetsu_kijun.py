@@ -1,5 +1,6 @@
-import pandas as pd
 import ast
+
+import pandas as pd
 
 
 class ShisetsuKijunDataFrame(pd.DataFrame):
@@ -22,7 +23,7 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
                 if isinstance(bed_count, str):
                     try:
                         bed_count = ast.literal_eval(bed_count)
-                    except:
+                    except (ValueError, SyntaxError):
                         return {}
 
                 if isinstance(bed_count, dict):

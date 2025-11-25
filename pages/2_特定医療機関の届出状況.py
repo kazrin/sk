@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import load_raw_data, display_institution_basic_info
+from utils import display_institution_basic_info, load_raw_data
 
 st.title("📋 特定医療機関の届出状況")
 

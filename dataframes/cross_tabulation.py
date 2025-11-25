@@ -1,4 +1,5 @@
 import pandas as pd
+
 from .shisetsu_kijun import ShisetsuKijunDataFrame
 
 
@@ -69,7 +70,7 @@ class ShisetsuKijunFilingCrossTabDataFrame(pd.DataFrame):
                 filing_types = institution_filings_by_number.get(institution_number, set())
                 all_filing_types.update(filing_types)
 
-        all_filing_types = sorted(list(all_filing_types))
+        all_filing_types = sorted(all_filing_types)
 
         if not all_filing_types:
             return cls()
@@ -114,7 +115,7 @@ class ShisetsuKijunFilingCrossTabDataFrame(pd.DataFrame):
         if target_institution_name not in self.columns:
             return self.copy()
 
-        filtered_df = self[self[target_institution_name] == False].copy()
+        filtered_df = self[~self[target_institution_name]].copy()
         return self.__class__(filtered_df)
 
     def get_display_dataframe(self, target_institution_name):

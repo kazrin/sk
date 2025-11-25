@@ -1,4 +1,5 @@
 import pandas as pd
+
 from .shisetsu_kijun import ShisetsuKijunDataFrame
 
 

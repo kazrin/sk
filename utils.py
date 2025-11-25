@@ -1,6 +1,6 @@
-import streamlit as st
 import ast
-from pathlib import Path
+
+import streamlit as st
 from dataframes import ShisetsuKijunDataFrame
 
 feather_file_path = "data/2025/11/all.feather"
@@ -25,7 +25,7 @@ def format_bed_count(bed_count):
     if isinstance(bed_count, str):
         try:
             bed_count = ast.literal_eval(bed_count)
-        except:
+        except (ValueError, SyntaxError):
             return ""
 
     # Handle non-dict cases
@@ -67,5 +67,3 @@ def display_institution_basic_info(row_data):
         st.write(f"**種別:** {row_data['種別']}")
 
 
-if __name__ == "__main__":
-    create_feather_file()

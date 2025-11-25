@@ -1,5 +1,7 @@
-import pandas as pd
 import ast
+
+import pandas as pd
+
 from .shisetsu_kijun import ShisetsuKijunDataFrame
 
 
@@ -62,7 +64,7 @@ class JaccardSimilarityDataFrame(pd.DataFrame):
             if isinstance(bed_count, str):
                 try:
                     institution_bed_counts[inst_num] = ast.literal_eval(bed_count)
-                except:
+                except (ValueError, SyntaxError):
                     institution_bed_counts[inst_num] = {}
             # If already a dict, use as is
             elif isinstance(bed_count, dict):
