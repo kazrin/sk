@@ -3,7 +3,7 @@ import ast
 from pathlib import Path
 from dataframes import ShisetsuKijunDataFrame
 
-feather_file_path = "data/2025/10/all.feather"
+feather_file_path = "data/2025/11/all.feather"
 
 
 @st.cache_resource
@@ -14,10 +14,10 @@ def load_raw_data():
 
 def format_bed_count(bed_count):
     """Format bed count dict to display string
-    
+
     Args:
         bed_count: Bed count dict, string representation, or None
-        
+
     Returns:
         Formatted string representation of bed count (e.g., "一般 20 / 療養 10")
     """
@@ -27,7 +27,7 @@ def format_bed_count(bed_count):
             bed_count = ast.literal_eval(bed_count)
         except:
             return ""
-    
+
     # Handle non-dict cases
     if bed_count is None:
         return ""
@@ -35,7 +35,7 @@ def format_bed_count(bed_count):
         return ""
     if not bed_count:  # Empty dict
         return ""
-    
+
     bed_parts = []
     for bed_type, bed_number in bed_count.items():
         # Skip if both are None
@@ -54,7 +54,7 @@ def format_bed_count(bed_count):
 def display_institution_basic_info(row_data):
     """Display basic institution information in two columns"""
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.write(f"**医療機関番号:** {int(row_data['医療機関番号'])}")
         st.write(f"**医療機関記号番号:** {row_data['医療機関記号番号']}")
@@ -65,6 +65,7 @@ def display_institution_basic_info(row_data):
         st.write(f"**住所:** {row_data['医療機関所在地（住所）']}")
         st.write(f"**電話番号:** {row_data['電話番号']}")
         st.write(f"**種別:** {row_data['種別']}")
+
 
 if __name__ == "__main__":
     create_feather_file()
