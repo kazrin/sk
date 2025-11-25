@@ -9,7 +9,7 @@
 | 北海道厚生局 | https://kouseikyoku.mhlw.go.jp/hokkaido/gyomu/gyomu/hoken_kikan/todokede_juri_ichiran.html | |
 | 東北 | https://kouseikyoku.mhlw.go.jp/tohoku/gyomu/gyomu/hoken_kikan/documents/201805koushin.html | |
 | 関東 | https://kouseikyoku.mhlw.go.jp/kantoshinetsu/chousa/kijyun.html | | 
-| 中部 | https://kouseikyoku.mhlw.go.jp/tokaihokuriku/newpage_00287.html | |
+| 中部 | https://kouseikyoku.mhlw.go.jp/tokaihokuriku/newpage_00349.html | |
 | 近畿 | https://kouseikyoku.mhlw.go.jp/kinki/gyomu/gyomu/hoken_kikan/shitei_jokyo_00004.html | |
 | 中国 | https://kouseikyoku.mhlw.go.jp/chugokushikoku/chousaka/shisetsukijunjuri.html | 
 | 四国 | https://kouseikyoku.mhlw.go.jp/shikoku/gyomu/gyomu/hoken_kikan/shitei/index.html | 4.施設基準の届出受理状況（全体） |
