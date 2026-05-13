@@ -3,7 +3,7 @@ import ast
 import streamlit as st
 from dataframes import ShisetsuKijunDataFrame
 
-feather_file_path = "data/2025/11/all.feather"
+feather_file_path = "data/2026/05/all.feather"
 
 
 @st.cache_resource
