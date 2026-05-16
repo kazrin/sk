@@ -1,0 +1,70 @@
+name: Monthly Data Update
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # 毎月1日 00:00 UTC
+  workflow_dispatch:
+    inputs:
+      yearmonth:
+        description: '年月 (例: 2026/05)'
+        required: false
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 年月とブランチ名を決定
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.yearmonth }}" ]; then
+            YM="${{ github.event.inputs.yearmonth }}"
+          else
+            YM="$(date +%Y/%m)"
+          fi
+          echo "yearmonth=${YM}" >> $GITHUB_OUTPUT
+          echo "branch=data/$(echo ${YM} | tr '/' '-')" >> $GITHUB_OUTPUT
+
+      - name: データ更新ブランチを作成
+        run: git checkout -b ${{ steps.date.outputs.branch }}
+
+      - name: download-data スキルを実行
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: /download-data ${{ steps.date.outputs.yearmonth }}
+
+      - name: 変更をコミット＆プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ utils.py
+          git diff --staged --quiet || git commit -m "data: ${{ steps.date.outputs.yearmonth }} 月次データ更新"
+          git push -u origin ${{ steps.date.outputs.branch }}
+
+      - name: PR を作成（自動マージなし）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "data: ${{ steps.date.outputs.yearmonth }} 月次データ更新" \
+            --body "$(cat <<'EOF'
+          ## 月次データ更新
+
+          毎月1日の自動データ更新です。
+
+          ### 確認事項
+          - [ ] 各地域のxlsxファイルが揃っているか
+          - [ ] `all.feather` の件数が前月比 -5% 未満か（スキル内で自動チェック済み）
+          - [ ] `utils.py` の `feather_file_path` が今月のパスに更新されているか
+
+          **マージ前に必ず上記を確認してください。**
+          EOF
+          )" \
+            --base main \
+            --head ${{ steps.date.outputs.branch }}
