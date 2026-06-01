@@ -38,6 +38,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: agent
           direct_prompt: /download-data ${{ steps.date.outputs.yearmonth }}
 
       - name: 変更をコミット＆プッシュ
