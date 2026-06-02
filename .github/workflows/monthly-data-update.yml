@@ -37,7 +37,7 @@ jobs:
       - name: download-data スキルを実行
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           mode: agent
           allowed_tools: "Edit,MultiEdit,Glob,Grep,LS,Read,Write,WebFetch,Bash"
           direct_prompt: /download-data ${{ steps.date.outputs.yearmonth }}
