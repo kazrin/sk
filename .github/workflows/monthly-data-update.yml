@@ -20,6 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: uv をセットアップ
+        uses: astral-sh/setup-uv@v3
+
+      - name: 依存関係をインストール
+        run: uv sync
+
       - name: 年月とブランチ名を決定
         id: date
         run: |
