@@ -39,6 +39,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           mode: agent
+          model: claude-sonnet-5
           allowed_tools: "Edit,MultiEdit,Glob,Grep,LS,Read,Write,WebFetch,Bash"
           direct_prompt: /download-data ${{ steps.date.outputs.yearmonth }}
 
