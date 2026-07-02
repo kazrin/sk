@@ -38,7 +38,9 @@ jobs:
           echo "branch=data/$(echo ${YM} | tr '/' '-')" >> $GITHUB_OUTPUT
 
       - name: データ更新ブランチを作成
-        run: git checkout -b ${{ steps.date.outputs.branch }}
+        run: |
+          git push origin --delete ${{ steps.date.outputs.branch }} 2>/dev/null || true
+          git checkout -b ${{ steps.date.outputs.branch }}
 
       - name: download-data スキルを実行
         uses: anthropics/claude-code-action@beta
