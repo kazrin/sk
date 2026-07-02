@@ -46,13 +46,16 @@ find data/YYYY/MM/九州/ -name "*.xlsx" | grep -v '_ika' | xargs rm -f
 
 ## Step 4: feather生成
 
-ダウンロードしたxlsxファイルから `all.feather` を生成する:
+ダウンロードしたxlsxファイルから `all.feather` を生成する。42ファイル分の読み込みには10分前後かかることがあるため、**フォアグラウンドで実行しない**（Bashツールのタイムアウトで処理が強制終了され、最初からやり直しになる）。必ず最初からバックグラウンドで実行すること:
 
 ```bash
-uv run python create_feather.py \
+nohup uv run python create_feather.py \
   --input-dir-path data/YYYY/MM \
-  --output-file-path data/YYYY/MM/all.feather
+  --output-file-path data/YYYY/MM/all.feather \
+  > /tmp/create_feather.log 2>&1 &
 ```
+
+その後は`BashOutput`ツールや`sleep 60`程度の間隔でのポーリングで完了を待つ。**待っている間に同じコマンドを再実行しない**（プロセスが二重に走るだけで無駄になる）。`/tmp/create_feather.log` にエラーが出ていればユーザーに報告して停止する。
 
 エラーが出た場合はエラーメッセージをユーザーに報告して停止する。
 
