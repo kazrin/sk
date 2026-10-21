@@ -301,7 +301,7 @@ class ShisetsuKijunDataFrame(pd.DataFrame):
         if "医療機関名称" not in self.columns:
             return self.copy()
 
-        mask = self["医療機関名称"].str.contains(search_term, case=case_sensitive, na=False)
+        mask = self["医療機関名称"].str.contains(search_term, case=case_sensitive, na=False, regex=False)
         return self[mask].copy()
 
     def filter_by_exact_institution_name(self, institution_name):
